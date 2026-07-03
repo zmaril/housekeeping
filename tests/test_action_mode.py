@@ -59,23 +59,9 @@ def test_dependabot_missing_file_still_fails_with_403s(tmp_path):
     assert "no .github/dependabot.yml" in result.details
 
 
-class WorkflowsCtx:
-    repo = "o/r"
-    default_branch = "main"
-
-    def __init__(self, workflows, latest_run_by_id):
-        self._workflows = workflows
-        self._latest = latest_run_by_id
-
-    def api(self, path, params=None):
-        if path.endswith("/actions/workflows"):
-            return {"workflows": self._workflows}
-        workflow_id = int(path.split("/workflows/")[1].split("/")[0])
-        latest = self._latest.get(workflow_id)
-        return {"workflow_runs": [latest] if latest else []}
-
-
 def test_ci_green_excludes_the_hosting_workflow(monkeypatch):
+    from test_ci_green import FakeCtx as WorkflowsCtx
+
     monkeypatch.setenv("GITHUB_WORKFLOW", "housekeeping")
     ctx = WorkflowsCtx(
         [
@@ -91,6 +77,8 @@ def test_ci_green_excludes_the_hosting_workflow(monkeypatch):
 
 
 def test_ci_green_grades_housekeeping_workflow_when_outside(monkeypatch):
+    from test_ci_green import FakeCtx as WorkflowsCtx
+
     monkeypatch.delenv("GITHUB_WORKFLOW", raising=False)
     ctx = WorkflowsCtx(
         [{"id": 2, "name": "housekeeping", "path": ".github/workflows/housekeeping.yml",
@@ -108,4 +96,4 @@ def test_render_markdown_escapes_pipes():
     }
     markdown = render_markdown(payload)
     assert "bad \\| table" in markdown
-    assert "❌ fail" in markdown
+    assert "✗ fail" in markdown

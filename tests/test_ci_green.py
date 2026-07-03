@@ -1,5 +1,14 @@
+import pytest
+
 from housekeeper.checks.ci import ci_green
 from housekeeper.registry import Status
+
+
+@pytest.fixture(autouse=True)
+def outside_actions(monkeypatch):
+    # In CI, GITHUB_WORKFLOW is ambient (e.g. "ci") and would trip the
+    # hosting-workflow exclusion against fake workflows with the same name.
+    monkeypatch.delenv("GITHUB_WORKFLOW", raising=False)
 
 
 class FakeCtx:

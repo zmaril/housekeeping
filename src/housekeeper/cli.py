@@ -160,7 +160,8 @@ def render(payload: dict) -> None:
     console.print(table)
 
 
-MD_ICON = {"pass": "✅", "fail": "❌", "skip": "➖", "error": "⚠️"}
+# same symbols as the terminal table; straitjacket rightly objects to emoji
+MD_ICON = {"pass": "✓", "fail": "✗", "skip": "–", "error": "!"}
 
 
 def render_markdown(payload: dict) -> str:
@@ -173,7 +174,7 @@ def render_markdown(payload: dict) -> str:
     for row in payload["results"]:
         status = f"{MD_ICON[row['status']]} {row['status']}"
         if row["status"] == "fail" and row["severity"] == "recommended":
-            status = "⚠️ warn"
+            status = "! warn"
         details = row["details"]
         if row["status"] == "fail" and row["fixable"]:
             details += f" — `housekeeper fix {row['check']}`"
