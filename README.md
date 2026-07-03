@@ -31,6 +31,35 @@ uv tool install .
 Needs `gh` (authenticated) and `git`. Lockfile sync checks use whichever of
 `cargo`/`bun`/`npm`/`uv`/… are installed and degrade to presence-only otherwise.
 
+### GitHub Action
+
+Run the audit in your own repo's CI — on PRs, pushes, and a weekly cron for
+the things that rot without commits (dead links, stale PRs, settings drift):
+
+```yaml
+name: housekeeping
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 7 * * 1"
+
+jobs:
+  housekeeping:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: zmaril/housekeeping@main
+```
+
+Results land in the job summary; a required-check failure fails the run.
+The default workflow token can't read some admin-level settings
+(vulnerability alerts, secret scanning, workflow permissions) — those checks
+skip with a note rather than guessing; pass `with: token:` a fine-grained
+PAT with read-only Administration scope for full coverage. Tune or disable
+checks with `.housekeeping.toml` in your repo root.
+
 ### Agent skill
 
 The `tidy-up` skill audits the repo you're in, drives fixes, and does a

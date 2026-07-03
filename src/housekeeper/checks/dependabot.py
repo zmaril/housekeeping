@@ -6,7 +6,7 @@ from pathlib import Path
 
 import yaml
 
-from ..context import RepoContext
+from ..context import GhError, RepoContext
 from ..fixing import apply_file_fix, confirm, console
 from ..registry import check, failed, fix_for, passed
 
@@ -37,9 +37,24 @@ def uncovered(ctx: RepoContext, covered: set[str]) -> list[str]:
     return missing
 
 
+def _setting(ctx: RepoContext, path: str) -> bool | None:
+    """True enabled, False disabled, None if the token can't see it (403)."""
+    try:
+        result = ctx.api(path)
+    except GhError as e:
+        if e.status == 404:
+            return False
+        if e.status == 403:
+            return None
+        raise
+    if isinstance(result, dict):
+        return bool(result.get("enabled"))
+    return True  # 204-style empty success
+
+
 @check("dependabot", needs=("clone", "api"))
 def dependabot(ctx: RepoContext):
-    problems = []
+    problems, unknown = [], []
     path = dependabot_path(ctx.workdir)
     if path is None:
         problems.append("no .github/dependabot.yml")
@@ -48,16 +63,22 @@ def dependabot(ctx: RepoContext):
         if missing:
             problems.append(f"dependabot.yml missing ecosystems: {', '.join(missing)}")
 
-    # 204 → enabled, 404 → disabled
-    if ctx.try_api(f"repos/{ctx.repo}/vulnerability-alerts") is None:
-        problems.append("vulnerability alerts disabled")
-    fixes = ctx.try_api(f"repos/{ctx.repo}/automated-security-fixes")
-    if not (isinstance(fixes, dict) and fixes.get("enabled")):
-        problems.append("automated security fixes disabled")
+    for label, api_path in (
+        ("vulnerability alerts", f"repos/{ctx.repo}/vulnerability-alerts"),
+        ("automated security fixes", f"repos/{ctx.repo}/automated-security-fixes"),
+    ):
+        state = _setting(ctx, api_path)
+        if state is False:
+            problems.append(f"{label} disabled")
+        elif state is None:
+            unknown.append(label)
 
+    note = (f"not visible to this token: {', '.join(unknown)} — "
+            "run housekeeper locally for full coverage") if unknown else ""
     if problems:
-        return failed("; ".join(problems))
-    return passed("dependabot.yml covers all ecosystems; alerts + security fixes on")
+        return failed("; ".join(problems), note)
+    return passed("dependabot.yml covers all ecosystems"
+                  + ("" if unknown else "; alerts + security fixes on"), note)
 
 
 UPDATE_TEMPLATE = """\
