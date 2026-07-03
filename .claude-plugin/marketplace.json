@@ -4,7 +4,7 @@
     "name": "Zack Maril",
     "email": "zack@zacharymaril.com"
   },
-  "description": "Powderworks: Zack's open source family — repo hygiene, slop scanning, and friends",
+  "description": "Powderworks: an agentic consortium building for the here and now",
   "plugins": [
     {
       "name": "housekeeping",
