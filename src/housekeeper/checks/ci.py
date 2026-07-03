@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import re
 from pathlib import Path
@@ -14,6 +15,7 @@ from ..registry import check, failed, fix_for, passed, skipped
 
 TEST_PATTERN = re.compile(r"\b(cargo test|bun test|npm test|pytest|go test|test)\b")
 LINT_PATTERN = re.compile(r"\b(clippy|ruff|eslint|lint|cargo fmt|rustfmt|prettier|biome)\b")
+PACKAGE_SCRIPT = re.compile(r"\b(?:bun|npm|pnpm|yarn) run ([\w:.-]+)")
 
 
 def workflow_files(workdir: Path) -> list[Path]:
@@ -56,6 +58,21 @@ def run_commands(workflow: dict) -> str:
     return "\n".join(chunks).lower()
 
 
+def resolve_package_scripts(workdir: Path, commands: str) -> str:
+    """A workflow's `bun run check` can hide the actual linter inside
+    package.json scripts — resolve one level so the patterns can see it."""
+    package = workdir / "package.json"
+    if not package.is_file():
+        return ""
+    try:
+        scripts = json.loads(package.read_text()).get("scripts", {})
+    except (json.JSONDecodeError, AttributeError):
+        return ""
+    bodies = [str(scripts[name]) for name in PACKAGE_SCRIPT.findall(commands)
+              if name in scripts]
+    return "\n".join(bodies).lower()
+
+
 @check("ci-exists", needs=("clone",))
 def ci_exists(ctx: RepoContext):
     files = workflow_files(ctx.workdir)
@@ -71,6 +88,7 @@ def ci_exists(ctx: RepoContext):
             triggered = True
             all_commands.append(run_commands(workflow))
     commands = "\n".join(all_commands)
+    commands += "\n" + resolve_package_scripts(ctx.workdir, commands)
 
     problems = []
     if not triggered:
