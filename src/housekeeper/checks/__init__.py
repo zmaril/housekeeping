@@ -12,6 +12,7 @@ from . import (  # noqa: F401
     readme,
     website,
     license,
+    changelog,
     repo_meta,
     stale,
 )

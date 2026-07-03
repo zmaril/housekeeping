@@ -21,14 +21,19 @@ DEFAULT_SEVERITY = {
     "readme": "required",
     "website": "required",
     "license": "required",
+    "changelog": "required",
     "repo-meta": "recommended",
     "stale": "recommended",
 }
 
-# Private repos get a softer profile.
+# The defaults above encode what good code looks like, public or private.
+# Private repos have no audience, so audience-facing checks soften.
 PRIVATE_SEVERITY = {
     "website": "recommended",
     "license": "recommended",
+    "changelog": "recommended",
+    "readme": "recommended",
+    "repo-meta": "off",
 }
 
 
