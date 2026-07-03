@@ -6,6 +6,8 @@ version; the git SHA is the version).
 
 ## 2026-07-03
 
+- The plugin marketplace is named `powderworks` — the family of Zack's open
+  source tools — so the install is `/plugin install housekeeping@powderworks`.
 - `changelog` check: a CHANGELOG file is now part of the floor (softer on
   private repos).
 - Public vs. private profiles: private repos soften the audience-facing

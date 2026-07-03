@@ -1,10 +1,10 @@
 {
-  "name": "housekeeping",
+  "name": "powderworks",
   "owner": {
     "name": "Zack Maril",
     "email": "zack@zacharymaril.com"
   },
-  "description": "Repo-hygiene auditing and confirm-first fixes",
+  "description": "Powderworks: Zack's open source family — repo hygiene, slop scanning, and friends",
   "plugins": [
     {
       "name": "housekeeping",
