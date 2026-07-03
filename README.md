@@ -50,10 +50,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: zmaril/housekeeping@main
+      - uses: zmaril/housekeeping@v1
 ```
 
-Results land in the job summary; a required-check failure fails the run.
+`v1` moves with compatible releases; pin `@v1.0.0` or a commit SHA if you'd
+rather nothing move under you. Results land in the job summary; a
+required-check failure fails the run.
 The default workflow token can't read some admin-level settings
 (vulnerability alerts, secret scanning, workflow permissions) — those checks
 skip with a note rather than guessing; pass `with: token:` a fine-grained

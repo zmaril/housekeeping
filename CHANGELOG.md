@@ -1,12 +1,13 @@
 # Changelog
 
-Notable changes to housekeeping, newest first, by date — housekeeper moves
-fast enough that dates beat version numbers (nothing downstream resolves a
-version; the git SHA is the version).
+Notable changes to housekeeping, newest first. Entries are dated; releases
+that matter to Action consumers also get a version, because `uses:` resolves
+tags — `v1` moves with compatible releases, `vX.Y.Z` tags are immutable. For
+the CLI, plugin, and skill, the git SHA remains the real version.
 
-## 2026-07-03
+## v1.0.0 — 2026-07-03
 
-- GitHub Action: `uses: zmaril/housekeeping@main` runs the audit in any
+- GitHub Action: `uses: zmaril/housekeeping@v1` runs the audit in any
   repo's CI with results in the job summary. Admin-only settings the
   workflow token can't read skip with a note instead of guessing, and
   `ci-green` excludes the workflow it runs inside (a transient red would
