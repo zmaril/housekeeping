@@ -9,11 +9,18 @@ def test_defaults():
     assert config.severity("stale", "public") == "recommended"
 
 
-def test_private_profile_softens():
+def test_private_profile_softens_audience_facing_checks():
     config = Config()
-    assert config.severity("website", "private") == "recommended"
-    assert config.severity("license", "private") == "recommended"
-    assert config.severity("website", "public") == "required"
+    for check in ("website", "license", "changelog", "readme"):
+        assert config.severity(check, "private") == "recommended"
+        assert config.severity(check, "public") == "required"
+    assert config.severity("repo-meta", "private") == "off"
+
+
+def test_private_profile_keeps_engineering_hygiene():
+    config = Config()
+    for check in ("ci-exists", "lockfiles", "dependabot", "secret-scanning"):
+        assert config.severity(check, "private") == "required"
 
 
 def test_repo_override_wins():

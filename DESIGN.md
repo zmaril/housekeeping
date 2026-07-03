@@ -129,6 +129,7 @@ non-skipped check failed.
 | `readme` | clone | Deterministic floor: README exists, has a title + description, install and usage sections, License and Contributing section headings (word families: licensing, contributions, … count), ≥ ~150 words, no broken relative links | Escalates to the `tidy-up` skill's README quality pass |
 | `website` | API + HTTP | Repo homepage URL is set and returns 200 (following ≤3 redirects, 10s timeout); README badge/doc links resolve | none — report only |
 | `license` | clone + API | LICENSE file present and GitHub detects a license | Drop in MIT with current year |
+| `changelog` | clone | A CHANGELOG file exists (CHANGELOG.md, CHANGES.md, HISTORY.md, …) | Scaffold a newest-first stub |
 | `repo-meta` | API | Description set; ≥1 topic; issues enabled | Prompt for values, set via API |
 | `stale` | API | No PRs idle >30 days; no merged-but-undeleted branches | none — report only |
 
@@ -144,10 +145,13 @@ Global `housekeeping.toml` sets the default severity of each check
 at its root to override — skip `website` on a library, declare the expected
 homepage URL explicitly, mark a sandbox exempt from `branch-protection`.
 
-Private repos get a softer default profile: `website` and `license` drop to
-`recommended`, and since full branch protection on private repos needs a paid
-plan, that check reports skip-with-note ("unavailable on this plan") rather
-than failing.
+The defaults encode what good *open source* looks like, so public and private
+repos get different profiles. Private repos have no audience: the
+audience-facing checks (`website`, `license`, `changelog`, `readme`) drop to
+`recommended`, `repo-meta` turns off, and since full branch protection on
+private repos needs a paid plan, that check reports skip-with-note
+("unavailable on this plan") rather than failing. Engineering hygiene —
+CI, lockfiles, dependabot, secret scanning — stays required everywhere.
 
 ## Skills layer
 
