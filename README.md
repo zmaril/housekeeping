@@ -1,5 +1,7 @@
 # housekeeping
 
+[![Powderworks Housekeeping on the GitHub Marketplace](https://img.shields.io/badge/marketplace-powderworks--housekeeping-blue?logo=github)](https://github.com/marketplace/actions/powderworks-housekeeping)
+
 Checks that a GitHub repo is in good order — branch protection, CI with tests
 and lint, dependabot coverage, secret scanning, read-only workflow tokens,
 lockfiles committed and in sync, gitignore coverage,
