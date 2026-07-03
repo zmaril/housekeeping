@@ -5,6 +5,12 @@ that matter to Action consumers also get a version, because `uses:` resolves
 tags — `v1` moves with compatible releases, `vX.Y.Z` tags are immutable. For
 the CLI, plugin, and skill, the git SHA remains the real version.
 
+## v1.0.1 — 2026-07-03
+
+- Marketplace-valid action metadata: display name "Powderworks Housekeeping"
+  (bare "housekeeping" collides with an existing name), description under
+  125 characters. The `uses: zmaril/housekeeping@v1` path is unchanged.
+
 ## v1.0.0 — 2026-07-03
 
 - GitHub Action: `uses: zmaril/housekeeping@v1` runs the audit in any

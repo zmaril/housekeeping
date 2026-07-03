@@ -1,5 +1,5 @@
-name: housekeeping
-description: Check that this repo is in good order — branch protection, CI, dependabot, lockfiles, README, license. Snobby yet configurable.
+name: Powderworks Housekeeping
+description: "Check a repo is in good order: branch protection, CI, dependabot, lockfiles, README, license. Snobby yet configurable."
 branding:
   icon: home
   color: gray-dark
