@@ -149,16 +149,38 @@ def fix(ctx: RepoContext):
 
 @check("ci-green", needs=("api",))
 def ci_green(ctx: RepoContext):
-    runs = ctx.api(f"repos/{ctx.repo}/actions/runs",
-                   params={"branch": ctx.default_branch, "per_page": 1})
-    if not runs.get("workflow_runs"):
-        return skipped(f"no workflow runs on {ctx.default_branch}",
-                       note="fails ci-exists instead if there's no CI at all")
-    latest = runs["workflow_runs"][0]
-    name, conclusion = latest.get("name", "?"), latest.get("conclusion")
-    if latest.get("status") != "completed":
-        return skipped(f"latest run of {name!r} still {latest.get('status')}")
-    if conclusion == "success":
-        return passed(f"latest {ctx.default_branch} run of {name!r} succeeded")
-    return failed(f"latest {ctx.default_branch} run of {name!r}: {conclusion}",
-                  note=latest.get("html_url", ""))
+    """Latest completed default-branch run of EVERY repo workflow must be green.
+
+    The runs list also contains workflows GitHub operates inside the repo
+    (Dependabot Updates, Dependency Graph — path starts with "dynamic/").
+    Grading "the latest run overall" can grade one of those, or grade one
+    workflow while another sits red, so: filter to workflows that actually
+    live in .github/workflows/ and require all of them to pass.
+    """
+    workflows = ctx.api(f"repos/{ctx.repo}/actions/workflows").get("workflows", [])
+    real = [w for w in workflows
+            if w.get("path", "").startswith(".github/workflows/")
+            and w.get("state") == "active"]
+    if not real:
+        return skipped("no workflows", note="ci-exists covers the absence of CI")
+
+    red, green, quiet = [], [], []
+    for workflow in real:
+        runs = ctx.api(
+            f"repos/{ctx.repo}/actions/workflows/{workflow['id']}/runs",
+            params={"branch": ctx.default_branch, "status": "completed", "per_page": 1},
+        )
+        latest = (runs.get("workflow_runs") or [None])[0]
+        if latest is None:
+            quiet.append(workflow["name"])
+        elif latest.get("conclusion") == "success":
+            green.append(workflow["name"])
+        else:
+            red.append(f"{workflow['name']} ({latest.get('conclusion')}: {latest.get('html_url', '')})")
+
+    note = f"no completed {ctx.default_branch} runs yet for: {', '.join(quiet)}" if quiet else ""
+    if red:
+        return failed(f"red on {ctx.default_branch}: {'; '.join(red)}", note)
+    if not green:
+        return skipped(f"no workflow has a completed {ctx.default_branch} run yet", note)
+    return passed(f"latest {ctx.default_branch} runs green: {', '.join(green)}", note)

@@ -119,7 +119,7 @@ non-skipped check failed.
 |---|---|---|---|
 | `branch-protection` | API | Default branch has a ruleset (or classic protection): PRs required, status checks required, force-push and deletion blocked | Apply a standard ruleset via API |
 | `ci-exists` | clone | `.github/workflows/` has a workflow triggered on PR + push-to-main whose jobs cover **test** and **lint** for each detected ecosystem | Scaffold a workflow from per-ecosystem templates |
-| `ci-green` | API | Most recent default-branch workflow run concluded `success` | none — report only |
+| `ci-green` | API | Latest completed default-branch run of **every** repo workflow (GitHub's `dynamic/` internals excluded) concluded `success` | none — report only |
 | `dependabot` | clone + API | `.github/dependabot.yml` exists and covers every detected ecosystem (cargo, bun/npm, pip/uv, actions, …); vulnerability alerts + security updates enabled | Generate/extend the yml; enable settings via API |
 | `lockfiles` | clone | For each manifest, the lockfile is committed and **in sync**: `cargo metadata --locked`, `bun install --frozen-lockfile --dry-run`, `uv lock --check`, `npm ci --dry-run` per ecosystem | Regenerate lockfile on a branch |
 | `straitjacket` | clone | A CI workflow step runs straitjacket — wiring only, findings are straitjacket's own business | Add the CI step from template |
