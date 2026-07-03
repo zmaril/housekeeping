@@ -7,6 +7,12 @@ the CLI, plugin, and skill, the git SHA remains the real version.
 
 ## 2026-07-03 (post-v1.0.1)
 
+- `stray-files` check (recommended): no scratch `.md`/`.txt` piling up at the
+  repo root; conventional community files and `[stray-files] allow` excepted.
+- `stale` now checks `delete_branch_on_merge` and gained a fix: enable the
+  setting and sweep already-merged branches, confirm-first.
+- The tidy-up skill knows about powderworks cross-promotion on zmaril repos.
+
 - `action-badge` check (recommended): a public repo that publishes an action
   should link its Marketplace listing in the README; the fix derives the
   slug from the action's name and inserts the badge under the title.
