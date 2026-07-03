@@ -145,8 +145,8 @@ Global `housekeeping.toml` sets the default severity of each check
 at its root to override — skip `website` on a library, declare the expected
 homepage URL explicitly, mark a sandbox exempt from `branch-protection`.
 
-The defaults encode what good *open source* looks like, so public and private
-repos get different profiles. Private repos have no audience: the
+The defaults encode what good code looks like, public or private — but the
+profiles differ. Private repos have no audience: the
 audience-facing checks (`website`, `license`, `changelog`, `readme`) drop to
 `recommended`, `repo-meta` turns off, and since full branch protection on
 private repos needs a paid plan, that check reports skip-with-note

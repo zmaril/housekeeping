@@ -26,8 +26,8 @@ DEFAULT_SEVERITY = {
     "stale": "recommended",
 }
 
-# The defaults above encode what good OPEN SOURCE looks like. Private repos
-# have no audience, so the audience-facing checks soften to recommended.
+# The defaults above encode what good code looks like, public or private.
+# Private repos have no audience, so audience-facing checks soften.
 PRIVATE_SEVERITY = {
     "website": "recommended",
     "license": "recommended",

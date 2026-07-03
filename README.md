@@ -11,13 +11,14 @@ Checking is always read-only. Fixing is separate, explains itself, and asks
 before changing anything; file fixes land on a `housekeeping/<check>` branch
 and only push + open a PR on an explicit yes.
 
-The defaults are my interpretation of what good open source looks like —
-snobby yet configurable, in the family spirit of
+The defaults are my interpretation of what good code looks like, whether
+it's public or private — snobby yet configurable, in the family spirit of
 [straitjacket](https://github.com/zmaril/Straitjacket). Public repos get the
-full treatment; private repos soften the audience-facing checks (website,
+full audience-facing treatment; private repos soften those checks (website,
 license, changelog, README polish, metadata), because a repo with no audience
-doesn't owe anyone a changelog. `.housekeeping.toml` overrides any of it per
-repo.
+doesn't owe anyone a changelog. Engineering hygiene — CI, lockfiles,
+dependabot, secret scanning — is required either way. `.housekeeping.toml`
+overrides any of it per repo.
 
 ## Install
 
