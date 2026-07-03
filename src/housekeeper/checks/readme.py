@@ -11,6 +11,11 @@ from ..registry import check, failed, passed
 MIN_WORDS = 150
 INSTALL = re.compile(r"^#{1,6}\s.*(install|getting started|quick\s?start|setup)", re.I | re.M)
 USAGE = re.compile(r"^#{1,6}\s.*(usage|use|example|how|docs|documentation)", re.I | re.M)
+# heading containing license/licenses/licensing/licence — a stray "license"
+# in prose satisfied the old substring floor by accident
+LICENSE_SECTION = re.compile(r"^#{1,6}\s.*\blicen[cs]\w*", re.I | re.M)
+# contributing/contributions/contribute/contributors
+CONTRIBUTING_SECTION = re.compile(r"^#{1,6}\s.*\bcontribut\w*", re.I | re.M)
 RELATIVE_LINK = re.compile(r"\[[^\]]*\]\((?!https?://|#|mailto:)([^)\s]+)\)")
 
 
@@ -41,8 +46,10 @@ def readme(ctx: RepoContext):
         problems.append("no install/getting-started section")
     if not USAGE.search(text):
         problems.append("no usage/docs section")
-    if "license" not in text.lower():
-        problems.append("no license mention")
+    if not LICENSE_SECTION.search(text):
+        problems.append("no License section heading")
+    if not CONTRIBUTING_SECTION.search(text):
+        problems.append("no Contributing section heading")
 
     broken = []
     for target in RELATIVE_LINK.findall(text):

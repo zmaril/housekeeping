@@ -126,7 +126,7 @@ non-skipped check failed.
 | `lockfiles` | clone | For each manifest, the lockfile is committed and **in sync**: `cargo metadata --locked`, `bun install --frozen-lockfile --dry-run`, `uv lock --check`, `npm ci --dry-run` per ecosystem | Regenerate lockfile on a branch |
 | `gitignore` | clone | `.gitignore` exists and covers each ecosystem's build junk (`target/`, `node_modules/`, `.venv/`, …) | Append missing patterns |
 | `straitjacket` | clone | A CI workflow step runs straitjacket — wiring only, findings are straitjacket's own business | Add the CI step from template |
-| `readme` | clone | Deterministic floor: README exists, has a title + description, install and usage sections, ≥ ~150 words, no broken relative links, mentions license | Escalates to the `tidy-up` skill's README quality pass |
+| `readme` | clone | Deterministic floor: README exists, has a title + description, install and usage sections, License and Contributing section headings (word families: licensing, contributions, … count), ≥ ~150 words, no broken relative links | Escalates to the `tidy-up` skill's README quality pass |
 | `website` | API + HTTP | Repo homepage URL is set and returns 200 (following ≤3 redirects, 10s timeout); README badge/doc links resolve | none — report only |
 | `license` | clone + API | LICENSE file present and GitHub detects a license | Drop in MIT with current year |
 | `repo-meta` | API | Description set; ≥1 topic; issues enabled | Prompt for values, set via API |
