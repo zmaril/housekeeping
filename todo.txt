@@ -4,7 +4,7 @@ housekeeping skill.
 
 [ ] zmaril/entl — last audit 2026-07-03: no CI, no dependabot.yml, no LICENSE,
     entl.dev unreachable, no topics. Pre-release, revisit after it stabilizes.
-[ ] zmaril/Straitjacket — clean except taste: run the readme-review skill.
+[ ] zmaril/Straitjacket — clean except taste: run the tidy-up skill's README pass.
 [ ] zmaril/powdermonkey — never audited.
 [ ] zmaril/plates — never audited.
 [ ] zmaril/philologist-lsp — never audited.

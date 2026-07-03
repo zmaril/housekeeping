@@ -1,9 +1,9 @@
 ---
-name: housekeeping
-description: Audit the current GitHub repo with housekeeper (branch protection, CI, dependabot, lockfiles, straitjacket, README, website, license) and drive fixes interactively. Use when the user asks to housekeep, audit, or tidy up a repo, or asks "is this repo in good order?"
+name: tidy-up
+description: Audit the current GitHub repo with housekeeper (branch protection, CI, dependabot, secret scanning, lockfiles, README, website, license) and drive confirm-first fixes, including a README quality pass. Use when the user asks to housekeep, audit, or tidy up a repo, or asks "is this repo in good order?"
 ---
 
-# Housekeeping
+# Tidy up a repo
 
 You drive `housekeeper`, a deterministic repo auditor. You interpret its
 results and help fix them — you do not re-derive the checks yourself.
@@ -55,8 +55,31 @@ Checks without automated fixes (`ci-green`, `website`, `stale`) need real
 work: investigate the failing run, fix the dead link, close the stale PR.
 Do that work with the user rather than telling them to.
 
-For a failing `readme` check — or a passing one the user wants better — use
-the `readme-review` skill.
+## README quality pass
+
+The `readme` check is a deterministic floor (title, sections, word count,
+unbroken links). When it fails on substance, or passes and the user wants the
+README actually *good*, do the judgment pass yourself:
+
+Read the README as a stranger who just landed on the repo, against one
+question: **in 30 seconds, do I know what this is, why I'd want it, and how
+to start?** Work through, in order:
+
+1. **First screen** — name, one-line pitch, proof it's alive (badge,
+   screenshot, example output). If the pitch buries the lede or reads like
+   marketing, say what the honest one-liner is.
+2. **Why** — what problem, for whom, and what they'd use otherwise. A README
+   that only says *what* leaves the reader to guess *why*.
+3. **Start** — can the install + first-use path be copy-pasted top to bottom
+   and work? Flag steps that assume unstated tools or context.
+4. **Depth cues** — links out to real docs, changelog, license, contributing.
+   Not everything belongs in the README; check it delegates.
+5. **Rot** — claims that no longer match the code (flags, versions, feature
+   lists). Cross-check anything checkable against the repo itself.
+
+Then **draft the edits** — concrete replacement text, not a critique memo.
+Propose the smallest set of changes that fixes what you found. Match the
+repo's existing voice; do not sand the personality off a README that has one.
 
 ## Config
 

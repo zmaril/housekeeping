@@ -45,7 +45,7 @@ housekeeping/
       stale.py
   skills/
     housekeeping/SKILL.md   # /housekeeping — run audit, interpret, drive fixes
-    readme-review/SKILL.md  # judgment pass on README quality
+    tidy-up/SKILL.md        # audit front door + README judgment pass
   housekeeping.toml         # defaults: severities, overrides
   README.md
 ```
@@ -126,7 +126,7 @@ non-skipped check failed.
 | `lockfiles` | clone | For each manifest, the lockfile is committed and **in sync**: `cargo metadata --locked`, `bun install --frozen-lockfile --dry-run`, `uv lock --check`, `npm ci --dry-run` per ecosystem | Regenerate lockfile on a branch |
 | `gitignore` | clone | `.gitignore` exists and covers each ecosystem's build junk (`target/`, `node_modules/`, `.venv/`, …) | Append missing patterns |
 | `straitjacket` | clone | A CI workflow step runs straitjacket — wiring only, findings are straitjacket's own business | Add the CI step from template |
-| `readme` | clone | Deterministic floor: README exists, has a title + description, install and usage sections, ≥ ~150 words, no broken relative links, mentions license | Escalates to `readme-review` skill for the quality/taste pass |
+| `readme` | clone | Deterministic floor: README exists, has a title + description, install and usage sections, ≥ ~150 words, no broken relative links, mentions license | Escalates to the `tidy-up` skill's README quality pass |
 | `website` | API + HTTP | Repo homepage URL is set and returns 200 (following ≤3 redirects, 10s timeout); README badge/doc links resolve | none — report only |
 | `license` | clone + API | LICENSE file present and GitHub detects a license | Drop in MIT with current year |
 | `repo-meta` | API | Description set; ≥1 topic; issues enabled | Prompt for values, set via API |
@@ -151,13 +151,14 @@ than failing.
 
 ## Skills layer
 
-- **`/housekeeping`** — runs `housekeeper check` on the current repo, reads
-  the JSON results, explains failures in plain language, and offers to drive
-  fixes one at a time. The interactive front door; the Python is the engine.
-- **`readme-review`** — invoked by `/housekeeping` when the `readme` check's
-  deterministic floor passes but quality is in question. Reads the README as
-  a newcomer would: can I tell what this is, why I'd want it, and how to
-  start, in 30 seconds? Drafts concrete edits rather than a critique.
+One skill, **`tidy-up`** (installed via plugin as `/housekeeping:tidy-up`, or
+via skills.sh into any agent): runs `housekeeper check` on the current repo,
+reads the JSON results, explains failures in plain language, and offers to
+drive fixes one at a time — the interactive front door; the Python is the
+engine. It also carries the README judgment pass the deterministic `readme`
+check can't do: read it as a newcomer (what is this, why would I want it, how
+do I start — in 30 seconds?) and draft concrete edits rather than a critique.
+Originally these were two skills, but they're one workflow with two phases.
 
 ## Out of scope (v1)
 
