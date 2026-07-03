@@ -22,9 +22,9 @@ def changelog(ctx: RepoContext):
 STUB = """\
 # Changelog
 
-Notable changes to this project, newest first.
+Notable changes to this project, newest first, by date.
 
-## Unreleased
+## {today}
 
 - started keeping a changelog
 """
@@ -32,14 +32,16 @@ Notable changes to this project, newest first.
 
 @fix_for("changelog")
 def fix(ctx: RepoContext):
+    import datetime
+
     def write(workdir: Path) -> list[Path]:
         target = workdir / "CHANGELOG.md"
-        target.write_text(STUB)
+        target.write_text(STUB.format(today=datetime.date.today().isoformat()))
         return [target]
 
     apply_file_fix(
         ctx, "changelog",
-        describe="add a CHANGELOG.md stub (newest-first, an Unreleased section to grow)",
+        describe="add a CHANGELOG.md stub (newest-first, dated entries)",
         why="a changelog tells users what changed without making them read diffs — "
             "and future-you is a user too",
         write_changes=write,
