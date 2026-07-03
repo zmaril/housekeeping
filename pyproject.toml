@@ -1,6 +1,6 @@
 [project]
 name = "housekeeper"
-version = "0.1.0"
+version = "1.0.0"
 description = "Checks that a GitHub repo is in good order"
 requires-python = ">=3.11"
 dependencies = [

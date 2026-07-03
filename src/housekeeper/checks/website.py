@@ -13,7 +13,7 @@ from .readme import find_readme
 EXTERNAL_LINK = re.compile(r"\[[^\]]*\]\((https?://[^)\s]+)\)")
 MAX_LINKS = 10
 TIMEOUT = 10
-UA = "housekeeper/0.1 (+https://github.com/zmaril)"
+UA = "housekeeper/1.0 (+https://github.com/zmaril/housekeeping)"
 
 
 def fetch_status(url: str) -> int | str:
