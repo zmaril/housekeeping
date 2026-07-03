@@ -79,3 +79,21 @@ of installing the plugin.
 ## Design
 
 See [DESIGN.md](DESIGN.md).
+
+## Contributing
+
+Issues and PRs welcome. The most useful thing you can send is a repo where
+housekeeper judges wrongly — a check that passes when it shouldn't, fails
+when it shouldn't, or a skip that deserves a better note. Concrete examples
+beat descriptions.
+
+New checks are one module in `src/housekeeper/checks/` — see the check
+contract in [DESIGN.md](DESIGN.md). House rules: checks are read-only, fixes
+explain themselves and confirm before touching anything, and skips say why.
+`uv run pytest` and `uv run ruff check .` before pushing; CI also runs
+[straitjacket](https://github.com/zmaril/Straitjacket) on everything,
+prose included.
+
+## License
+
+[MIT](LICENSE).
