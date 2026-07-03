@@ -8,6 +8,6 @@ jobs:
   straitjacket:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: curl -fsSL https://raw.githubusercontent.com/zmaril/straitjacket/main/install.sh | sh
       - run: straitjacket
