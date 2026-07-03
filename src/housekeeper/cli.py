@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from datetime import datetime, timezone
 
@@ -93,6 +94,12 @@ def cmd_check(args) -> int:
         render(payload)
         console.print(f"[dim]results saved to {results_path}[/dim]")
 
+    # Inside GitHub Actions, also render into the job summary.
+    summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+    if summary_path:
+        with open(summary_path, "a") as summary:
+            summary.write(render_markdown(payload) + "\n")
+
     return exit_code(payload)
 
 
@@ -151,6 +158,29 @@ def render(payload: dict) -> None:
             details += f"  [cyan](housekeeper fix {row['check']})[/cyan]"
         table.add_row(row["check"], status, details, row["note"])
     console.print(table)
+
+
+# same symbols as the terminal table; straitjacket rightly objects to emoji
+MD_ICON = {"pass": "✓", "fail": "✗", "skip": "–", "error": "!"}
+
+
+def render_markdown(payload: dict) -> str:
+    lines = [
+        f"### housekeeping: {payload['repo']} ({payload['visibility']}) — {payload['checked_at']}",
+        "",
+        "| check | status | details | note |",
+        "|---|---|---|---|",
+    ]
+    for row in payload["results"]:
+        status = f"{MD_ICON[row['status']]} {row['status']}"
+        if row["status"] == "fail" and row["severity"] == "recommended":
+            status = "! warn"
+        details = row["details"]
+        if row["status"] == "fail" and row["fixable"]:
+            details += f" — `housekeeper fix {row['check']}`"
+        cells = [row["check"], status, details, row["note"]]
+        lines.append("| " + " | ".join(c.replace("|", "\\|") for c in cells) + " |")
+    return "\n".join(lines) + "\n"
 
 
 def exit_code(payload: dict) -> int:

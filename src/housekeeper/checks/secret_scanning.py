@@ -13,6 +13,10 @@ def _status(info: dict, key: str) -> str:
 
 @check("secret-scanning", needs=("api",))
 def secret_scanning(ctx: RepoContext):
+    # GitHub only includes security_and_analysis for tokens with admin read.
+    if not ctx.repo_info.get("security_and_analysis"):
+        return skipped("security settings not visible to this token",
+                       note="run housekeeper locally (or pass an admin-read token) for coverage")
     scanning = _status(ctx.repo_info, "secret_scanning")
     push_protection = _status(ctx.repo_info, "secret_scanning_push_protection")
 

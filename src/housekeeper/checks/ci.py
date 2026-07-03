@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 
@@ -156,11 +157,17 @@ def ci_green(ctx: RepoContext):
     Grading "the latest run overall" can grade one of those, or grade one
     workflow while another sits red, so: filter to workflows that actually
     live in .github/workflows/ and require all of them to pass.
+
+    When running INSIDE a workflow (the housekeeping action), that workflow
+    grades itself one run behind: one transient red and every later run fails
+    because the previous one did, forever. Exclude the hosting workflow.
     """
+    hosting = os.environ.get("GITHUB_WORKFLOW")
     workflows = ctx.api(f"repos/{ctx.repo}/actions/workflows").get("workflows", [])
     real = [w for w in workflows
             if w.get("path", "").startswith(".github/workflows/")
-            and w.get("state") == "active"]
+            and w.get("state") == "active"
+            and w.get("name") != hosting]
     if not real:
         return skipped("no workflows", note="ci-exists covers the absence of CI")
 
@@ -178,7 +185,12 @@ def ci_green(ctx: RepoContext):
         else:
             red.append(f"{workflow['name']} ({latest.get('conclusion')}: {latest.get('html_url', '')})")
 
-    note = f"no completed {ctx.default_branch} runs yet for: {', '.join(quiet)}" if quiet else ""
+    notes = []
+    if quiet:
+        notes.append(f"no completed {ctx.default_branch} runs yet for: {', '.join(quiet)}")
+    if hosting and any(w.get("name") == hosting for w in workflows):
+        notes.append(f"not grading {hosting!r} — this check runs inside it")
+    note = "; ".join(notes)
     if red:
         return failed(f"red on {ctx.default_branch}: {'; '.join(red)}", note)
     if not green:

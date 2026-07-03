@@ -2,14 +2,20 @@
 
 from __future__ import annotations
 
-from ..context import RepoContext
+from ..context import GhError, RepoContext
 from ..fixing import confirm, console
-from ..registry import check, failed, fix_for, passed
+from ..registry import check, failed, fix_for, passed, skipped
 
 
 @check("workflow-permissions", needs=("api",))
 def workflow_permissions(ctx: RepoContext):
-    perms = ctx.api(f"repos/{ctx.repo}/actions/permissions/workflow")
+    try:
+        perms = ctx.api(f"repos/{ctx.repo}/actions/permissions/workflow")
+    except GhError as e:
+        if e.status == 403:
+            return skipped("workflow permissions not visible to this token",
+                           note="run housekeeper locally (or pass an admin-read token) for coverage")
+        raise
     problems = []
     if perms.get("default_workflow_permissions") != "read":
         problems.append("default GITHUB_TOKEN is read-write")

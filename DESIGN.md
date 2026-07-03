@@ -170,7 +170,13 @@ Originally these were two skills, but they're one workflow with two phases.
   touch-a-repo tool. The single-repo results format is designed so a sweep
   is a loop, not a redesign, if it's ever wanted.
 - Auto-merge, or any mutation without per-fix confirmation.
-- A GitHub Action distributed into each repo.
+- ~~A GitHub Action distributed into each repo.~~ Reversed: `action.yml` at
+  the repo root lets anyone run `uses: zmaril/housekeeping@main` in their own
+  CI. The original chicken-and-egg objection only applied to auditing *your
+  own* fleet from outside; for a stranger's repo, the action runs inside it
+  with their token. Checks the workflow token can't see (admin-level
+  settings) skip with a note, and `ci-green` never grades the workflow it
+  runs inside.
 - Org-level checks, other people's repos, GitHub Enterprise.
 - Issue/PR template enforcement, CODEOWNERS, contributing guides — easy to
   add later as new modules in `checks/`, which is the point of the registry.

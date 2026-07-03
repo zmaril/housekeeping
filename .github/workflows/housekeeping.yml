@@ -1,0 +1,14 @@
+name: housekeeping
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 7 * * 1"  # weekly drift check: website rot, stale PRs, settings flips
+
+jobs:
+  housekeeping:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./

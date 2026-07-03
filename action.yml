@@ -1,0 +1,32 @@
+name: housekeeping
+description: Check that this repo is in good order — branch protection, CI, dependabot, lockfiles, README, license. Snobby yet configurable.
+branding:
+  icon: home
+  color: gray-dark
+
+inputs:
+  token:
+    description: >-
+      Token for API reads. Defaults to the workflow token, which cannot see
+      some admin-level settings (vulnerability alerts, secret scanning,
+      workflow permissions) — those checks skip with a note. Pass a
+      fine-grained PAT with read-only Administration scope for full coverage.
+    default: ${{ github.token }}
+  only:
+    description: Comma-separated subset of checks to run (default all).
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - uses: astral-sh/setup-uv@v7
+    - shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        ONLY: ${{ inputs.only }}
+      run: |
+        if [ -n "$ONLY" ]; then
+          uvx --from "${{ github.action_path }}" housekeeper check --only "$ONLY"
+        else
+          uvx --from "${{ github.action_path }}" housekeeper check
+        fi

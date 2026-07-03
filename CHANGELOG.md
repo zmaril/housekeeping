@@ -6,6 +6,12 @@ version; the git SHA is the version).
 
 ## 2026-07-03
 
+- GitHub Action: `uses: zmaril/housekeeping@main` runs the audit in any
+  repo's CI with results in the job summary. Admin-only settings the
+  workflow token can't read skip with a note instead of guessing, and
+  `ci-green` excludes the workflow it runs inside (a transient red would
+  otherwise deadlock itself red forever). This repo runs it on itself,
+  weekly and on every push/PR.
 - The plugin marketplace is named `powderworks` — the family of Zack's open
   source tools — so the install is `/plugin install housekeeping@powderworks`.
 - `changelog` check: a CHANGELOG file is now part of the floor (softer on
