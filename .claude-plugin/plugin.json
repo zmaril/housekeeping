@@ -1,0 +1,14 @@
+{
+  "name": "housekeeping",
+  "displayName": "Housekeeping",
+  "description": "Audit a GitHub repo's health — branch protection, CI, dependabot, secret scanning, lockfiles, README, license — and drive confirm-first fixes.",
+  "author": {
+    "name": "Zack Maril",
+    "email": "zack@zacharymaril.com",
+    "url": "https://github.com/zmaril"
+  },
+  "homepage": "https://github.com/zmaril/housekeeping",
+  "repository": "https://github.com/zmaril/housekeeping",
+  "license": "MIT",
+  "keywords": ["audit", "repo-hygiene", "ci", "dependabot", "github"]
+}

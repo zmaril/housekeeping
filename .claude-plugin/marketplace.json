@@ -1,0 +1,24 @@
+{
+  "name": "housekeeping",
+  "owner": {
+    "name": "Zack Maril",
+    "email": "zack@zacharymaril.com"
+  },
+  "description": "Repo-hygiene auditing and confirm-first fixes",
+  "plugins": [
+    {
+      "name": "housekeeping",
+      "source": "./",
+      "description": "Audit a GitHub repo's health — branch protection, CI, dependabot, secret scanning, lockfiles, README, license — and drive confirm-first fixes.",
+      "displayName": "Housekeeping",
+      "author": {
+        "name": "Zack Maril",
+        "email": "zack@zacharymaril.com"
+      },
+      "homepage": "https://github.com/zmaril/housekeeping",
+      "repository": "https://github.com/zmaril/housekeeping",
+      "license": "MIT",
+      "keywords": ["audit", "repo-hygiene", "ci", "dependabot", "github"]
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+Fleet audit backlog. These repos are in flux; run `housekeeper check` on each
+once they settle, then work the failures with `housekeeper fix` / the
+housekeeping skill.
+
+[ ] zmaril/entl — last audit 2026-07-03: no CI, no dependabot.yml, no LICENSE,
+    entl.dev unreachable, no topics. Pre-release, revisit after it stabilizes.
+[ ] zmaril/Straitjacket — clean except taste: run the tidy-up skill's README pass.
+[ ] zmaril/powdermonkey — never audited.
+[ ] zmaril/plates — never audited.
+[ ] zmaril/philologist-lsp — never audited.
+[ ] zmaril/skop — never audited.
+[ ] zmaril/website — never audited (website check should point at zacharymaril.com).
+[ ] older public repos (hancock, bpfquery, zltk, jawohl, stethoscope,
+    crashcart, zquery, carp-ebooks, …) — decide per repo: audit or archive.
+    Archiving is also housekeeping.

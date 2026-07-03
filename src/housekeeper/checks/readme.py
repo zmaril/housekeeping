@@ -1,4 +1,4 @@
-"""README deterministic floor. Quality/taste is the readme-review skill's job."""
+"""README deterministic floor. Quality/taste is the tidy-up skill's job."""
 
 from __future__ import annotations
 
@@ -54,6 +54,6 @@ def readme(ctx: RepoContext):
 
     if problems:
         return failed("; ".join(problems),
-                      note="floor check only — /housekeeping runs the readme-review skill for quality")
+                      note="floor check only — the tidy-up skill does the quality pass")
     return passed(f"{path.name} passes the floor",
-                  note="for the quality pass, run the readme-review skill")
+                  note="for the quality pass, use the tidy-up skill")

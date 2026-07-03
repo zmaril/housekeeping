@@ -1,7 +1,8 @@
 # housekeeping
 
 Checks that a GitHub repo is in good order — branch protection, CI with tests
-and lint, dependabot coverage, lockfiles committed and in sync,
+and lint, dependabot coverage, secret scanning, read-only workflow tokens,
+lockfiles committed and in sync, gitignore coverage,
 [straitjacket](https://github.com/zmaril/Straitjacket) wired into CI, a README
 that clears the floor, a reachable website, a license, sane repo metadata, and
 no stale PRs or branches. One repo at a time; run it when you touch a repo.
@@ -13,12 +14,32 @@ and only push + open a PR on an explicit yes.
 ## Install
 
 ```sh
-uv tool install .        # or, in-tree:
-uv run housekeeper --help
+uv tool install git+https://github.com/zmaril/housekeeping
+# or from a checkout:
+uv tool install .
 ```
 
 Needs `gh` (authenticated) and `git`. Lockfile sync checks use whichever of
 `cargo`/`bun`/`npm`/`uv`/… are installed and degrade to presence-only otherwise.
+
+### Agent skill
+
+The `tidy-up` skill audits the repo you're in, drives fixes, and does a
+README quality pass. Install it into Claude Code as a plugin:
+
+```
+/plugin marketplace add zmaril/housekeeping
+/plugin install housekeeping@housekeeping
+```
+
+then invoke `/housekeeping:tidy-up`. Or install it into any agent
+(Claude Code, Cursor, Copilot, …) via [skills.sh](https://www.skills.sh/):
+
+```sh
+npx skills add zmaril/housekeeping
+```
+
+Either way, the skill offers to install the `housekeeper` CLI if it's missing.
 
 ## Usage
 
@@ -50,10 +71,10 @@ and branch protection reports skip-with-note where the plan doesn't allow it.
 
 ## Skills
 
-`skills/` holds two Claude Code skills: `housekeeping` (front door — runs the
-audit, explains, drives fixes) and `readme-review` (the judgment pass the
-deterministic README check can't do). Symlink them into `~/.claude/skills/`
-to use them everywhere.
+`skills/tidy-up/` is the skill source — front door for the audit, fix
+driving, and the README judgment pass the deterministic check can't do.
+Working on housekeeping itself? Symlink it into `~/.claude/skills/` instead
+of installing the plugin.
 
 ## Design
 
