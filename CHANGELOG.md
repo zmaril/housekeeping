@@ -5,6 +5,13 @@ that matter to Action consumers also get a version, because `uses:` resolves
 tags — `v1` moves with compatible releases, `vX.Y.Z` tags are immutable. For
 the CLI, plugin, and skill, the git SHA remains the real version.
 
+## 2026-07-03 (post-v1.0.1)
+
+- `action-badge` check (recommended): a public repo that publishes an action
+  should link its Marketplace listing in the README; the fix derives the
+  slug from the action's name and inserts the badge under the title.
+- housekeeping's own README carries its Marketplace badge.
+
 ## v1.0.1 — 2026-07-03
 
 - Marketplace-valid action metadata: display name "Powderworks Housekeeping"

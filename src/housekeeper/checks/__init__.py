@@ -10,6 +10,7 @@ from . import (  # noqa: F401
     gitignore,
     straitjacket,
     readme,
+    action_badge,
     website,
     license,
     changelog,

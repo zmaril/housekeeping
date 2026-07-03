@@ -19,6 +19,7 @@ DEFAULT_SEVERITY = {
     "gitignore": "recommended",
     "straitjacket": "required",
     "readme": "required",
+    "action-badge": "recommended",
     "website": "required",
     "license": "required",
     "changelog": "required",
