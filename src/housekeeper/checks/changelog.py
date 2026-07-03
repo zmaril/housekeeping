@@ -1,4 +1,6 @@
-"""A changelog file exists."""
+"""A changelog file exists. Presence only, by policy — versions, dates, or
+freeform are all fine; we don't police format, only that changes get written
+down somewhere findable."""
 
 from __future__ import annotations
 

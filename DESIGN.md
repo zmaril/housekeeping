@@ -129,7 +129,7 @@ non-skipped check failed.
 | `readme` | clone | Deterministic floor: README exists, has a title + description, install and usage sections, License and Contributing section headings (word families: licensing, contributions, … count), ≥ ~150 words, no broken relative links | Escalates to the `tidy-up` skill's README quality pass |
 | `website` | API + HTTP | Repo homepage URL is set and returns 200 (following ≤3 redirects, 10s timeout); README badge/doc links resolve | none — report only |
 | `license` | clone + API | LICENSE file present and GitHub detects a license | Drop in MIT with current year |
-| `changelog` | clone | A CHANGELOG file exists (CHANGELOG.md, CHANGES.md, HISTORY.md, …) | Scaffold a newest-first stub |
+| `changelog` | clone | A CHANGELOG file exists (CHANGELOG.md, CHANGES.md, HISTORY.md, …) — presence only; versions, dates, or freeform all fine | Scaffold a newest-first dated stub |
 | `repo-meta` | API | Description set; ≥1 topic; issues enabled | Prompt for values, set via API |
 | `stale` | API | No PRs idle >30 days; no merged-but-undeleted branches | none — report only |
 
