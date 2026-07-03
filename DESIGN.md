@@ -121,7 +121,10 @@ non-skipped check failed.
 | `ci-exists` | clone | `.github/workflows/` has a workflow triggered on PR + push-to-main whose jobs cover **test** and **lint** for each detected ecosystem | Scaffold a workflow from per-ecosystem templates |
 | `ci-green` | API | Latest completed default-branch run of **every** repo workflow (GitHub's `dynamic/` internals excluded) concluded `success` | none — report only |
 | `dependabot` | clone + API | `.github/dependabot.yml` exists and covers every detected ecosystem (cargo, bun/npm, pip/uv, actions, …); vulnerability alerts + security updates enabled | Generate/extend the yml; enable settings via API |
+| `secret-scanning` | API | Secret scanning + push protection enabled (skip-with-note on private repos without Advanced Security) | Enable via API |
+| `workflow-permissions` | API | Default workflow `GITHUB_TOKEN` is read-only and cannot approve PRs | Set via API |
 | `lockfiles` | clone | For each manifest, the lockfile is committed and **in sync**: `cargo metadata --locked`, `bun install --frozen-lockfile --dry-run`, `uv lock --check`, `npm ci --dry-run` per ecosystem | Regenerate lockfile on a branch |
+| `gitignore` | clone | `.gitignore` exists and covers each ecosystem's build junk (`target/`, `node_modules/`, `.venv/`, …) | Append missing patterns |
 | `straitjacket` | clone | A CI workflow step runs straitjacket — wiring only, findings are straitjacket's own business | Add the CI step from template |
 | `readme` | clone | Deterministic floor: README exists, has a title + description, install and usage sections, ≥ ~150 words, no broken relative links, mentions license | Escalates to `readme-review` skill for the quality/taste pass |
 | `website` | API + HTTP | Repo homepage URL is set and returns 200 (following ≤3 redirects, 10s timeout); README badge/doc links resolve | none — report only |

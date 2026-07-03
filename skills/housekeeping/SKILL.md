@@ -8,6 +8,18 @@ description: Audit the current GitHub repo with housekeeper (branch protection, 
 You drive `housekeeper`, a deterministic repo auditor. You interpret its
 results and help fix them — you do not re-derive the checks yourself.
 
+## Prerequisites
+
+The skill needs the `housekeeper` CLI and an authenticated `gh`. If
+`housekeeper` is missing, offer to install it:
+
+```sh
+uv tool install git+https://github.com/zmaril/housekeeping
+```
+
+(If `uv` is also missing, point the user at https://docs.astral.sh/uv/ rather
+than picking an install method for them.)
+
 ## Run the audit
 
 ```sh
