@@ -38,7 +38,7 @@ README quality pass. Install it into Claude Code as a plugin:
 
 ```
 /plugin marketplace add zmaril/housekeeping
-/plugin install housekeeping@housekeeping
+/plugin install housekeeping@powderworks
 ```
 
 then invoke `/housekeeping:tidy-up`. Or install it into any agent
