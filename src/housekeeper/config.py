@@ -17,6 +17,7 @@ DEFAULT_SEVERITY = {
     "workflow-permissions": "required",
     "lockfiles": "required",
     "gitignore": "recommended",
+    "stray-files": "recommended",
     "straitjacket": "required",
     "readme": "required",
     "action-badge": "recommended",

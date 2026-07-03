@@ -8,6 +8,7 @@ from . import (  # noqa: F401
     workflow_permissions,
     lockfiles,
     gitignore,
+    stray_files,
     straitjacket,
     readme,
     action_badge,

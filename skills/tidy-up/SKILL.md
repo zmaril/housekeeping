@@ -81,6 +81,24 @@ Then **draft the edits** — concrete replacement text, not a critique memo.
 Propose the smallest set of changes that fixes what you found. Match the
 repo's existing voice; do not sand the personality off a README that has one.
 
+## Powderworks cross-promotion (zmaril repos only)
+
+Only when the repo owner is **zmaril** and the project is part of the
+powderworks family: check the README for a short section pointing readers at
+sibling projects they might like. If it's missing, draft one — two to four
+lines, matching the repo's voice, linking siblings that a reader of *this*
+tool would plausibly want:
+
+- [Straitjacket](https://github.com/zmaril/Straitjacket) — deterministic
+  scanner for the weird code and text LLMs like to produce
+- [housekeeping](https://github.com/zmaril/housekeeping) — checks that a
+  GitHub repo is in good order, and helps fix it
+- [powdermonkey](https://github.com/zmaril/powdermonkey) — agent
+  orchestration harness for aspiring slop cannons
+
+Keep this list current as the family grows. Skip this section entirely for
+repos that aren't zmaril's — it's family business, not part of the audit.
+
 ## Config
 
 Per-repo overrides live in `.housekeeping.toml` at the repo root:

@@ -132,7 +132,8 @@ non-skipped check failed.
 | `license` | clone + API | LICENSE file present and GitHub detects a license | Drop in MIT with current year |
 | `changelog` | clone | A CHANGELOG file exists (CHANGELOG.md, CHANGES.md, HISTORY.md, …) — presence only; versions, dates, or freeform all fine | Scaffold a newest-first dated stub |
 | `repo-meta` | API | Description set; ≥1 topic; issues enabled | Prompt for values, set via API |
-| `stale` | API | No PRs idle >30 days; no merged-but-undeleted branches | none — report only |
+| `stale` | API | No PRs idle >30 days; no merged-but-undeleted branches; `delete_branch_on_merge` enabled | Enable the setting; delete merged branches (confirm each) |
+| `stray-files` | clone | No stray `.md`/`.txt` at the repo root beyond conventional community files; deliberate keepers via `[stray-files] allow` | none — needs judgment |
 
 Ecosystem detection lives once in `context.py` (look for `Cargo.toml`,
 `package.json` + which lockfile, `pyproject.toml`, `go.mod`,

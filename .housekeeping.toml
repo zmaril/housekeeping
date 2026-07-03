@@ -1,3 +1,7 @@
 # housekeeping, on itself: no website — the repo is the product.
 [checks]
 website = "off"
+
+[stray-files]
+# deliberate root files: the design doc and the fleet-audit backlog
+allow = ["DESIGN.md", "todo.txt"]
