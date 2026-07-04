@@ -195,9 +195,13 @@ def ci_green(ctx: RepoContext):
             and w.get("state") == "active"
             and w.get("name") != hosting
             and w.get("name") not in family]
+    excluded = sorted({w.get("name", "") for w in workflows
+                       if w.get("name") in family or w.get("name") == hosting})
     if not real:
         return skipped("no workflows to grade beyond housekeeping's own",
-                       note="ci-exists covers the absence of CI")
+                       note="not grading housekeeping-family/hosting workflows: "
+                            + ", ".join(excluded) if excluded
+                            else "ci-exists covers the absence of CI")
 
     red, green, quiet = [], [], []
     for workflow in real:
@@ -216,8 +220,6 @@ def ci_green(ctx: RepoContext):
     notes = []
     if quiet:
         notes.append(f"no completed {ctx.default_branch} runs yet for: {', '.join(quiet)}")
-    excluded = sorted({w.get("name", "") for w in workflows
-                       if w.get("name") in family or w.get("name") == hosting})
     if excluded:
         notes.append(f"not grading housekeeping-family/hosting workflows: {', '.join(excluded)}")
     note = "; ".join(notes)

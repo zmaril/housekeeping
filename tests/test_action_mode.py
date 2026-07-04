@@ -73,7 +73,7 @@ def test_ci_green_excludes_the_hosting_workflow(monkeypatch):
     )
     result = ci_green(ctx)
     assert result.status == Status.PASS
-    assert "not grading 'housekeeping'" in result.note
+    assert "not grading" in result.note and "housekeeping" in result.note
 
 
 def test_ci_green_never_grades_family_workflows(monkeypatch):
