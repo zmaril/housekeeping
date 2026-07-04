@@ -5,6 +5,7 @@ on:
   pull_request:
   schedule:
     - cron: "0 7 * * 1"  # weekly drift check: website rot, stale PRs, settings flips
+  workflow_dispatch:  # the captain's "now" button
 
 jobs:
   housekeeping:

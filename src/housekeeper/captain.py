@@ -23,7 +23,8 @@ import yaml
 from .context import RepoContext
 from .checks.ci import triggers as workflow_triggers
 
-REQUIRED_TRIGGERS = {"pull_request", "push", "schedule"}
+REQUIRED_TRIGGERS = {"pull_request", "push", "schedule", "workflow_dispatch"}
+KNOWN_POLICY = {"checks", "required-file"}
 
 
 def is_housekeeping_workflow(repo: str, text: str) -> bool:
@@ -56,6 +57,7 @@ class Manifest:
     members: list[Member]
     policy_checks: dict[str, str] = field(default_factory=dict)
     required_files: list[RequiredFile] = field(default_factory=list)
+    unknown_policy: list[str] = field(default_factory=list)
 
 
 def load_manifest(path: Path) -> Manifest:
@@ -77,15 +79,19 @@ def load_manifest(path: Path) -> Manifest:
         members=members,
         policy_checks=policy.get("checks", {}),
         required_files=required,
+        # Surfaced, never silently ignored: a typo'd policy section (or one
+        # from a newer housekeeping) should be seen, not skipped.
+        unknown_policy=sorted(set(policy) - KNOWN_POLICY),
     )
 
 
 @dataclass
 class MemberReport:
     repo: str
-    status: str  # "ok" | "fail" | "conflict" | "error"
+    status: str  # "ok" | "fail" | "conflict" | "error" | "parked"
     details: str
     note: str = ""
+    workflow_path: str = ""
 
 
 def _file_text(ctx: RepoContext, path: str) -> str | None:
@@ -177,8 +183,32 @@ def captain_member(ctx: RepoContext, policy: dict[str, str],
         return MemberReport(ctx.repo, "conflict",
                             "; ".join(conflicts),
                             note="; ".join(problems) if problems else
-                            "reconcile the member's .housekeeping.toml with fleet policy")
+                            "reconcile the member's .housekeeping.toml with fleet policy",
+                            workflow_path=workflow_path)
     if problems:
-        return MemberReport(ctx.repo, "fail", "; ".join(problems))
+        return MemberReport(ctx.repo, "fail", "; ".join(problems),
+                            workflow_path=workflow_path)
     return MemberReport(ctx.repo, "ok",
-                        f"self-auditing via {workflow_path}, latest run green")
+                        f"self-auditing via {workflow_path}, latest run green",
+                        workflow_path=workflow_path)
+
+
+def dispatch_self_audit(ctx: RepoContext, workflow_path: str) -> str:
+    """Trigger a member's self-audit now — the fleet's 'now' button, so new
+    checks don't wait a week of crons to reach everyone."""
+    from .context import GhError
+
+    workflows = ctx.api(f"repos/{ctx.repo}/actions/workflows").get("workflows", [])
+    match = next((w for w in workflows if w.get("path") == workflow_path), None)
+    if match is None:
+        return "workflow not found"
+    try:
+        ctx.api(f"repos/{ctx.repo}/actions/workflows/{match['id']}/dispatches",
+                method="POST", input={"ref": ctx.default_branch})
+    except GhError as e:
+        if e.status == 422:
+            return "not dispatchable — workflow lacks the workflow_dispatch trigger"
+        if e.status == 403:
+            return "token can't dispatch here (needs actions: write)"
+        raise
+    return "dispatched"

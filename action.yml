@@ -21,6 +21,12 @@ inputs:
       delegation check (is every fleet member auditing itself?) instead of
       auditing this repo.
     default: ""
+  dispatch:
+    description: >-
+      With captain: also trigger every member's self-audit now, so new checks
+      reach the fleet immediately instead of waiting for weekly crons.
+      Requires a token with actions:write on the members.
+    default: ""
 
 runs:
   using: composite
@@ -31,8 +37,11 @@ runs:
         GH_TOKEN: ${{ inputs.token }}
         ONLY: ${{ inputs.only }}
         CAPTAIN: ${{ inputs.captain }}
+        DISPATCH: ${{ inputs.dispatch }}
       run: |
-        if [ -n "$CAPTAIN" ]; then
+        if [ -n "$CAPTAIN" ] && [ "$DISPATCH" = "true" ]; then
+          uvx --from "${{ github.action_path }}" housekeeper captain "$CAPTAIN" --dispatch
+        elif [ -n "$CAPTAIN" ]; then
           uvx --from "${{ github.action_path }}" housekeeper captain "$CAPTAIN"
         elif [ -n "$ONLY" ]; then
           uvx --from "${{ github.action_path }}" housekeeper check --only "$ONLY"
