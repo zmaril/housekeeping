@@ -8,16 +8,8 @@ from ..context import RepoContext
 from ..fixing import apply_file_fix
 from ..registry import check, failed, passed, fix_for, skipped
 
-# ecosystem name → patterns its .gitignore should carry
-WANTED = {
-    "cargo": ["target/"],
-    "bun": ["node_modules/"],
-    "npm": ["node_modules/"],
-    "pnpm": ["node_modules/"],
-    "yarn": ["node_modules/"],
-    "uv": [".venv/", "__pycache__/"],
-    "pip": [".venv/", "__pycache__/"],
-}
+# The build-junk patterns each ecosystem should ignore live on the Ecosystem
+# (languages.py) — read them off `eco.gitignore`.
 
 
 def missing_patterns(ctx: RepoContext) -> list[str]:
@@ -27,7 +19,7 @@ def missing_patterns(ctx: RepoContext) -> list[str]:
         have = {line.strip().lstrip("/") for line in path.read_text().splitlines()}
     missing = []
     for eco in ctx.ecosystems:
-        for pattern in WANTED.get(eco.name, []):
+        for pattern in eco.gitignore:
             if pattern not in have and pattern.rstrip("/") not in have:
                 missing.append(pattern)
     return sorted(set(missing))
@@ -35,7 +27,7 @@ def missing_patterns(ctx: RepoContext) -> list[str]:
 
 @check("gitignore", needs=("clone",))
 def gitignore(ctx: RepoContext):
-    if not any(WANTED.get(e.name) for e in ctx.ecosystems):
+    if not any(e.gitignore for e in ctx.ecosystems):
         return skipped("no ecosystems with known build junk detected")
     if not (ctx.workdir / ".gitignore").is_file():
         return failed("no .gitignore")

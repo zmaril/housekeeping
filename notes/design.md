@@ -30,7 +30,8 @@ housekeeping/
   pyproject.toml            # uv-managed; entry point `housekeeper`
   src/housekeeper/
     cli.py                  # check / fix / report
-    context.py              # RepoContext: gh wrapper, clone cache, ecosystem detection
+    context.py              # RepoContext: gh wrapper, clone cache
+    languages.py            # single source of truth for per-language/ecosystem facts
     registry.py             # @check registry, Result type
     checks/
       branch_protection.py
@@ -75,6 +76,25 @@ def lockfiles(ctx: RepoContext) -> Result: ...
   set and none expected", "branch protection unavailable on this plan").
 - A fixable check also provides a `fix(ctx)` in the same module, so the check
   and its remedy never drift apart.
+
+### Language registry
+
+Everything a check needs to know that's specific to a package manager or a
+language lives in **`languages.py`**, never hard-coded in a check:
+
+- **`Ecosystem`** (detected by manifest — cargo, bun, npm, uv, ruby, go, …):
+  its lockfile, how to verify/regenerate it (`lock_check`/`lock_regen`/`tool`),
+  its dependabot id, its `.gitignore` build-junk patterns, its `language`, and a
+  CI job template. `ECOSYSTEMS` is the registry; `detect_ecosystems()` returns
+  the entries a repo uses.
+- **`Language`** (rust, js, python, ruby, go): the `test`/`lint`/`fmt` regexes
+  that prove it's exercised in CI. Several ecosystems share one language, so
+  they're joined by `Ecosystem.language`.
+- **`TypedLanguage`** (typescript, python, clojure): the type-layer axis —
+  detection `markers`, the typechecker `signal`, and `guidance`.
+
+A check reads `eco.gitignore` or `LANGUAGES[eco.language].test`; adding a
+language means one new registry entry, not edits scattered across six checks.
 
 ### Two data sources
 

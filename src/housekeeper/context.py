@@ -5,12 +5,15 @@ from __future__ import annotations
 import json
 import re
 import subprocess
-from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
 from typing import Any
 
 from .config import Config
+
+# Ecosystem/language knowledge lives in one place (languages.py). Re-exported here
+# because that's where checks and tests have always imported Ecosystem from.
+from .languages import Ecosystem, detect_ecosystems  # noqa: F401
 
 CACHE_DIR = Path.home() / ".cache" / "housekeeping"
 
@@ -19,15 +22,6 @@ class GhError(RuntimeError):
     def __init__(self, status: int | None, message: str):
         super().__init__(message)
         self.status = status
-
-
-@dataclass(frozen=True)
-class Ecosystem:
-    name: str  # cargo, bun, npm, pnpm, yarn, uv, pip, go, github-actions
-    manifest: str
-    lockfile: str | None  # expected lockfile filename, None if the ecosystem has none
-    dependabot: str  # package-ecosystem value dependabot expects
-    dependabot_alts: tuple[str, ...] = ()  # also acceptable in dependabot.yml
 
 
 def run(
@@ -148,47 +142,6 @@ class RepoContext:
     @cached_property
     def ecosystems(self) -> list[Ecosystem]:
         return detect_ecosystems(self.workdir)
-
-
-def detect_ecosystems(workdir: Path) -> list[Ecosystem]:
-    found: list[Ecosystem] = []
-
-    if (workdir / "Cargo.toml").is_file():
-        found.append(Ecosystem("cargo", "Cargo.toml", "Cargo.lock", "cargo"))
-
-    if (workdir / "package.json").is_file():
-        if (workdir / "bun.lock").is_file() or (workdir / "bun.lockb").is_file():
-            lock = "bun.lock" if (workdir / "bun.lock").is_file() else "bun.lockb"
-            found.append(Ecosystem("bun", "package.json", lock, "bun", ("npm",)))
-        elif (workdir / "pnpm-lock.yaml").is_file():
-            found.append(Ecosystem("pnpm", "package.json", "pnpm-lock.yaml", "npm"))
-        elif (workdir / "yarn.lock").is_file():
-            found.append(Ecosystem("yarn", "package.json", "yarn.lock", "npm"))
-        else:
-            found.append(Ecosystem("npm", "package.json", "package-lock.json", "npm"))
-
-    if (workdir / "pyproject.toml").is_file():
-        if (workdir / "uv.lock").is_file():
-            found.append(Ecosystem("uv", "pyproject.toml", "uv.lock", "uv", ("pip",)))
-        else:
-            # No lock yet — assume uv, since that's the house style.
-            found.append(Ecosystem("uv", "pyproject.toml", "uv.lock", "uv", ("pip",)))
-    elif (workdir / "requirements.txt").is_file():
-        found.append(Ecosystem("pip", "requirements.txt", None, "pip"))
-
-    if (workdir / "Gemfile").is_file():
-        found.append(Ecosystem("ruby", "Gemfile", "Gemfile.lock", "bundler"))
-
-    if (workdir / "go.mod").is_file():
-        found.append(Ecosystem("go", "go.mod", "go.sum", "gomod"))
-
-    workflows = workdir / ".github" / "workflows"
-    if workflows.is_dir() and any(workflows.glob("*.y*ml")):
-        found.append(
-            Ecosystem("github-actions", ".github/workflows", None, "github-actions")
-        )
-
-    return found
 
 
 def local_checkout_for(repo: str) -> Path | None:

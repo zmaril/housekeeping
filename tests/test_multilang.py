@@ -7,12 +7,13 @@ from housekeeper.checks.builds import builds
 from housekeeper.checks.ci import ci_exists
 from housekeeper.checks.codegen import codegen_drift
 from housekeeper.config import Config
-from housekeeper.context import Ecosystem, detect_ecosystems
+from housekeeper.context import detect_ecosystems
+from housekeeper.languages import ECOSYSTEMS
 from housekeeper.registry import Status
 
-RUST = Ecosystem("cargo", "Cargo.toml", "Cargo.lock", "cargo")
-RUBY = Ecosystem("ruby", "Gemfile", "Gemfile.lock", "bundler")
-BUN = Ecosystem("bun", "package.json", "bun.lock", "bun", ("npm",))
+RUST = ECOSYSTEMS["cargo"]
+RUBY = ECOSYSTEMS["ruby"]
+BUN = ECOSYSTEMS["bun"]
 
 
 def repo(tmp_path, workflow_text, ecosystems=(), config=None, scripts=None):

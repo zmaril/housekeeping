@@ -14,35 +14,24 @@ from pathlib import Path
 
 from ..context import RepoContext, run
 from ..fixing import apply_file_fix, console
+from ..languages import ECOSYSTEMS, TYPED_LANGUAGES
 from ..registry import check, failed, fix_for, passed, skipped
 from .ci import resolve_package_scripts, workflow_files
 
-SIGNALS = {
-    "typescript": re.compile(r"\b(tsc|vue-tsc|tsgo|typecheck|astro check)\b"),
-    "python": re.compile(
-        r"\b(mypy|pyright|basedpyright|pyre|pytype|pyrefly|ty check)\b"
-    ),
-    "clojure": re.compile(r"\b(clj-kondo|core\.typed|typedclojure)\b"),
-}
 
-GUIDANCE = {
-    "typescript": "run tsc (or vue-tsc / astro check) in CI",
-    "python": "run mypy / pyright / ty in CI",
-    "clojure": "run clj-kondo (or core.typed) in CI",
-}
+def _has_marker(workdir: Path, lang: str) -> bool:
+    return any((workdir / m).is_file() for m in TYPED_LANGUAGES[lang].markers)
 
 
 def typed_languages(workdir: Path) -> list[str]:
     langs = []
-    if (workdir / "tsconfig.json").is_file() or (workdir / "jsconfig.json").is_file():
+    if _has_marker(workdir, "typescript"):
         langs.append("typescript")
     elif (workdir / "package.json").is_file():
         langs.append("javascript-untyped")
-    if (workdir / "pyproject.toml").is_file() or (
-        workdir / "requirements.txt"
-    ).is_file():
+    if _has_marker(workdir, "python"):
         langs.append("python")
-    if (workdir / "deps.edn").is_file() or (workdir / "project.clj").is_file():
+    if _has_marker(workdir, "clojure"):
         langs.append("clojure")
     return langs
 
@@ -66,10 +55,12 @@ def typecheck(ctx: RepoContext):
                 "javascript with no type layer — add a tsconfig/jsconfig "
                 "(checkJs counts) and then typecheck it in CI"
             )
-        elif SIGNALS[lang].search(text):
+        elif TYPED_LANGUAGES[lang].signal.search(text):
             covered.append(lang)
         else:
-            problems.append(f"{lang}: CI never typechecks — {GUIDANCE[lang]}")
+            problems.append(
+                f"{lang}: CI never typechecks — {TYPED_LANGUAGES[lang].guidance}"
+            )
 
     if problems:
         return failed(
@@ -77,44 +68,6 @@ def typecheck(ctx: RepoContext):
             note="lint and tests pass while types rot — the silent failure mode",
         )
     return passed(f"typechecking runs in CI: {', '.join(covered)}")
-
-
-WORKFLOWS = {
-    "bun": """\
-name: typecheck
-on:
-  push:
-    branches: [main]
-  pull_request:
-
-jobs:
-  typecheck:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-      - run: bun install --frozen-lockfile
-      - run: bunx tsc --noEmit
-""",
-    "npm": """\
-name: typecheck
-on:
-  push:
-    branches: [main]
-  pull_request:
-
-jobs:
-  typecheck:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - run: npm ci
-      - run: npx tsc --noEmit
-""",
-}
 
 
 @fix_for("typecheck")
@@ -129,7 +82,10 @@ def fix(ctx: RepoContext):
         )
         return
 
+    # The typecheck workflow template lives on the JS ecosystem (languages.py);
+    # bun if this repo uses it, else the npm template.
     runner = "bun" if any(e.name == "bun" for e in ctx.ecosystems) else "npm"
+    workflow = ECOSYSTEMS[runner].typecheck_template
 
     # Preflight so the first red CI run isn't a surprise.
     tool = (
@@ -147,7 +103,7 @@ def fix(ctx: RepoContext):
     def write(workdir: Path) -> list[Path]:
         target = workdir / ".github" / "workflows" / "typecheck.yml"
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(WORKFLOWS[runner])
+        target.write_text(workflow)
         return [target]
 
     apply_file_fix(

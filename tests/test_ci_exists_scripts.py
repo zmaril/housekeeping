@@ -25,7 +25,7 @@ jobs:
 
 
 def repo_with_check_script(tmp_path, scripts):
-    from housekeeper.context import Ecosystem
+    from housekeeper.languages import ECOSYSTEMS
 
     workflows = tmp_path / ".github" / "workflows"
     workflows.mkdir(parents=True)
@@ -33,7 +33,7 @@ def repo_with_check_script(tmp_path, scripts):
     (tmp_path / "package.json").write_text(json.dumps({"scripts": scripts}))
     return SimpleNamespace(
         workdir=tmp_path,
-        ecosystems=[Ecosystem("bun", "package.json", "bun.lock", "bun", ("npm",))],
+        ecosystems=[ECOSYSTEMS["bun"]],
     )
 
 

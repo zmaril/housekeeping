@@ -2,6 +2,18 @@
 
 Notable changes to housekeeping, newest first.
 
+## v1.11.0 — 2026-07-04
+
+- Internal: per-language / per-ecosystem knowledge is now consolidated in one
+  module, `languages.py`. Previously "cargo" (and every other ecosystem) was
+  defined across five files — `Ecosystem` detection in `context.py`, CI signals
+  and templates in `ci.py`, lockfile commands in `lockfiles.py`, gitignore
+  patterns in `gitignore.py`, typecheck signals in `typecheck.py`. They're now
+  fields on typed `Ecosystem` / `Language` / `TypedLanguage` records in a single
+  registry; a check reads `eco.gitignore` or `LANGUAGES[eco.language].test`
+  instead of carrying its own table. Pure refactor — no behaviour change, same
+  148 tests. Adding a language is now one registry entry.
+
 ## v1.10.0 — 2026-07-04
 
 - `ci-scheduled-run` check (recommended): CI should run on a schedule, not only on

@@ -9,37 +9,8 @@ from ..context import RepoContext, run
 from ..fixing import apply_file_fix, console
 from ..registry import check, failed, fix_for, passed, skipped
 
-# tool → (sync-check command, regen command)
-COMMANDS = {
-    "cargo": (
-        ["cargo", "metadata", "--locked", "--format-version", "1"],
-        ["cargo", "metadata", "--format-version", "1"],
-    ),
-    "bun": (["bun", "install", "--frozen-lockfile", "--dry-run"], ["bun", "install"]),
-    "npm": (
-        ["npm", "ci", "--dry-run", "--ignore-scripts"],
-        ["npm", "install", "--package-lock-only"],
-    ),
-    "pnpm": (
-        ["pnpm", "install", "--frozen-lockfile", "--lockfile-only"],
-        ["pnpm", "install", "--lockfile-only"],
-    ),
-    "yarn": (
-        ["yarn", "install", "--immutable", "--mode=skip-build"],
-        ["yarn", "install", "--mode=skip-build"],
-    ),
-    "uv": (["uv", "lock", "--check"], ["uv", "lock"]),
-}
-
-TOOL = {
-    "cargo": "cargo",
-    "bun": "bun",
-    "npm": "npm",
-    "pnpm": "pnpm",
-    "yarn": "yarn",
-    "uv": "uv",
-    "go": "go",
-}
+# The sync-check / regen commands and the tool binary now live on the Ecosystem
+# (languages.py) — read them off `eco.lock_check` / `eco.lock_regen` / `eco.tool`.
 
 
 def tracked(workdir: Path, filename: str) -> bool:
@@ -65,15 +36,13 @@ def lockfiles(ctx: RepoContext):
         if not tracked(ctx.workdir, lockfile):
             problems.append(f"{eco.name}: {lockfile} exists but is not committed")
             continue
-        tool = TOOL.get(eco.name)
-        command = COMMANDS.get(eco.name)
-        if not command or not tool:
+        if not eco.lock_check or not eco.tool:
             unverified.append(f"{eco.name} (no sync command known)")
             continue
-        if not shutil.which(tool):
-            unverified.append(f"{eco.name} ({tool} not installed)")
+        if not shutil.which(eco.tool):
+            unverified.append(f"{eco.name} ({eco.tool} not installed)")
             continue
-        proc = run(command[0], cwd=ctx.workdir)
+        proc = run(list(eco.lock_check), cwd=ctx.workdir)
         if proc.returncode != 0:
             problems.append(
                 f"{eco.name}: {eco.lockfile} out of sync with {eco.manifest}"
@@ -96,11 +65,9 @@ def fix(ctx: RepoContext):
         if not eco.lockfile:
             continue
         lock = ctx.workdir / eco.lockfile
-        command = COMMANDS.get(eco.name)
-        tool = TOOL.get(eco.name)
-        if not command or not tool or not shutil.which(tool):
+        if not eco.lock_check or not eco.tool or not shutil.which(eco.tool):
             continue
-        if not lock.is_file() or run(command[0], cwd=ctx.workdir).returncode != 0:
+        if not lock.is_file() or run(list(eco.lock_check), cwd=ctx.workdir).returncode:
             stale.append(eco)
     if not stale:
         console.print(
@@ -114,7 +81,7 @@ def fix(ctx: RepoContext):
             lockfile = eco.lockfile
             if lockfile is None:
                 continue
-            proc = run(COMMANDS[eco.name][1], cwd=workdir)
+            proc = run(list(eco.lock_regen), cwd=workdir)
             if proc.returncode != 0:
                 console.print(
                     f"[red]{eco.name} regen failed:[/red] {proc.stderr.strip()[:500]}"
