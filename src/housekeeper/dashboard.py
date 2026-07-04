@@ -1,5 +1,5 @@
-"""Render a fleet audit into a self-contained HTML dashboard: a matrix of every member
-(row, with its optional logo) against every check (column), each cell the status.
+"""Render a fleet audit into a self-contained HTML dashboard: a matrix of every check
+(row) against every member (column, with its optional logo), each cell the status.
 
 Fed the same per-repo payloads `housekeeper check` produces, so the dashboard is just a
 view — no second source of truth."""
@@ -48,7 +48,7 @@ def _outcome(row: dict) -> str:
     return status
 
 
-def _columns(payloads: list[dict]) -> list[str]:
+def _rows(payloads: list[dict]) -> list[str]:
     """Every check that appears, in registry (display) order; unknowns (e.g. `config`) last."""
     seen: set[str] = set()
     for payload in payloads:
@@ -60,37 +60,52 @@ def _columns(payloads: list[dict]) -> list[str]:
     return known + extra
 
 
+def _repo_header(member, payload: dict | None) -> str:
+    repo = member.repo
+    short = html.escape(repo.split("/")[-1])
+    href = f"https://github.com/{html.escape(repo)}"
+    if payload is None:
+        return (
+            f'<th class="repo bad" title="unreachable">'
+            f'<a href="{href}"><span>{short}</span></a></th>'
+        )
+    logo = logo_url(repo, payload.get("logo", ""))
+    img = f'<img src="{html.escape(logo)}" alt="" loading="lazy">' if logo else ""
+    return f'<th class="repo"><a href="{href}">{img}<span>{short}</span></a></th>'
+
+
 def render_matrix(
     name: str, members: list, payloads: list[dict | None], now: str | None = None
 ) -> str:
     now = now or datetime.now(timezone.utc).isoformat(timespec="minutes")
     live = [p for p in payloads if p]
-    columns = _columns(live)
+    checks = _rows(live)
 
-    head_cells = "".join(
-        f'<th class="check"><span>{html.escape(c)}</span></th>' for c in columns
+    head = '<th class="corner"></th>' + "".join(
+        _repo_header(m, p) for m, p in zip(members, payloads)
     )
+    # one lookup per column (member); None marks an unreachable repo.
+    columns = [{r["check"]: r for r in p["results"]} if p else None for p in payloads]
+
     body_rows = []
-    for member, payload in zip(members, payloads):
-        repo = member.repo
-        short = html.escape(repo.split("/")[-1])
-        repo_href = f"https://github.com/{html.escape(repo)}"
-        if payload is None:
-            cells = f'<td class="bad" colspan="{len(columns)}">unreachable</td>'
-            body_rows.append(_row(repo_href, short, "", cells))
-            continue
-        by_check = {r["check"]: r for r in payload["results"]}
-        logo = logo_url(repo, payload.get("logo", ""))
-        parts = []
-        for col in columns:
-            row = by_check.get(col)
+    for check in checks:
+        cells = []
+        for by_check in columns:
+            if by_check is None:
+                cells.append('<td class="off" title="unreachable">·</td>')
+                continue
+            row = by_check.get(check)
             outcome = _outcome(row) if row else "none"
             glyph, cls = CELL.get(outcome, CELL["none"])
             title = (
-                html.escape(f"{col}: {row['details']}") if row else f"{col}: not run"
+                html.escape(f"{check}: {row['details']}")
+                if row
+                else f"{check}: not run"
             )
-            parts.append(f'<td class="{cls}" title="{title}">{glyph}</td>')
-        body_rows.append(_row(repo_href, short, logo, "".join(parts)))
+            cells.append(f'<td class="{cls}" title="{title}">{glyph}</td>')
+        body_rows.append(
+            f'<tr><th class="check">{html.escape(check)}</th>{"".join(cells)}</tr>'
+        )
 
     legend = " ".join(
         f'<span class="tag {cls}">{html.escape(label)}</span>' for cls, label in LEGEND
@@ -99,7 +114,7 @@ def render_matrix(
         name=html.escape(name),
         now=html.escape(now),
         legend=legend,
-        head=head_cells,
+        head=head,
         body="\n".join(body_rows),
     )
 
@@ -118,17 +133,12 @@ def render_document(
     )
 
 
-def _row(href: str, short: str, logo: str, cells: str) -> str:
-    img = f'<img src="{html.escape(logo)}" alt="" loading="lazy">' if logo else ""
-    return f'<tr><th class="repo"><a href="{href}">{img}<span>{short}</span></a></th>{cells}</tr>'
-
-
 _PAGE = """\
 <h1>{name} <span class="sub">fleet check matrix · {now}</span></h1>
 <div class="legend">{legend}</div>
 <div class="scroll">
 <table>
-<thead><tr><th class="repo"></th>{head}</tr></thead>
+<thead><tr>{head}</tr></thead>
 <tbody>
 {body}
 </tbody>
@@ -152,10 +162,12 @@ td {{ width: 2rem; height: 2rem; text-align: center; font-weight: 700; }}
 td.ok {{ color: var(--ok); }} td.warn {{ color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent); }}
 td.bad {{ color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, transparent); }}
 td.skip, td.off {{ color: var(--skip); }}
-thead th.check {{ background: var(--head); height: 8rem; vertical-align: bottom; padding: .4rem .1rem; }}
-thead th.check span {{ writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; font-weight: 500; }}
-th.repo {{ background: var(--head); text-align: left; padding: .3rem .6rem; position: sticky; left: 0; }}
-th.repo a {{ display: flex; align-items: center; gap: .5rem; color: inherit; text-decoration: none; }}
-th.repo img {{ width: 20px; height: 20px; border-radius: 4px; object-fit: contain; }}
+thead th.repo {{ background: var(--head); vertical-align: bottom; height: 7rem; padding: .5rem .3rem; }}
+thead th.repo a {{ display: flex; flex-direction: column; align-items: center; gap: .4rem; color: inherit; text-decoration: none; }}
+thead th.repo img {{ width: 22px; height: 22px; border-radius: 4px; object-fit: contain; }}
+thead th.repo span {{ writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; font-weight: 500; }}
+thead th.repo.bad span {{ color: var(--bad); }}
+th.corner {{ background: var(--head); position: sticky; left: 0; z-index: 1; }}
+tbody th.check {{ background: var(--head); text-align: left; padding: .3rem .8rem; position: sticky; left: 0; white-space: nowrap; font-weight: 500; }}
 </style>
 """
