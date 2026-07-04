@@ -1,16 +1,7 @@
+from conftest import Ctx, write_wf
+
 from housekeeper.checks.ci_continue_on_error import ci_continue_on_error
 from housekeeper.registry import Status
-
-
-def write_wf(tmp_path, name, content):
-    d = tmp_path / ".github" / "workflows"
-    d.mkdir(parents=True, exist_ok=True)
-    (d / name).write_text(content)
-
-
-class Ctx:
-    def __init__(self, tmp_path):
-        self.workdir = tmp_path
 
 
 def test_flags_test_step_that_masks_failure(tmp_path):

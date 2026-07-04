@@ -18,7 +18,7 @@ import re
 
 from ..context import RepoContext
 from ..registry import check, failed, passed
-from .ci import parse_workflow, workflow_files
+from .ci import iter_jobs
 
 # A version value that isn't pinned to anything stable: latest, a bare wildcard, or
 # an x-style wildcard (18.x, 3.*). `stable`/`oldstable` are intentionally allowed.
@@ -38,25 +38,19 @@ def _version_keys(with_block: dict) -> list[tuple[str, str]]:
 @check("reproducible-toolchain", needs=("clone",))
 def reproducible_toolchain(ctx: RepoContext):
     floating: list[str] = []
-    for path in workflow_files(ctx.workdir):
-        workflow = parse_workflow(path)
-        if not workflow:
-            continue
-        for jid, job in (workflow.get("jobs") or {}).items():
-            if not isinstance(job, dict):
+    for path, _jid, job in iter_jobs(ctx.workdir):
+        for step in job.get("steps") or []:
+            if not isinstance(step, dict):
                 continue
-            for step in job.get("steps") or []:
-                if not isinstance(step, dict):
-                    continue
-                uses = step.get("uses")
-                with_block = step.get("with")
-                if not (isinstance(uses, str) and "setup-" in uses) or not isinstance(
-                    with_block, dict
-                ):
-                    continue
-                for key, value in _version_keys(with_block):
-                    if FLOATING.match(value):
-                        floating.append(f"{path.name}: {key}: {value}")
+            uses = step.get("uses")
+            with_block = step.get("with")
+            if not (isinstance(uses, str) and "setup-" in uses) or not isinstance(
+                with_block, dict
+            ):
+                continue
+            for key, value in _version_keys(with_block):
+                if FLOATING.match(value):
+                    floating.append(f"{path.name}: {key}: {value}")
     if floating:
         return failed(
             "CI builds on a floating toolchain version: " + ", ".join(floating),

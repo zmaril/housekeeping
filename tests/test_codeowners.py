@@ -1,10 +1,7 @@
+from conftest import Ctx
+
 from housekeeper.checks.codeowners import codeowners
 from housekeeper.registry import Status
-
-
-class Ctx:
-    def __init__(self, tmp_path):
-        self.workdir = tmp_path
 
 
 def test_fails_when_absent(tmp_path):

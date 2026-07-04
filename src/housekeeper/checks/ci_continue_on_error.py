@@ -19,7 +19,7 @@ import re
 
 from ..context import RepoContext
 from ..registry import check, failed, passed
-from .ci import parse_workflow, workflow_files
+from .ci import iter_jobs, step_text
 
 # Commands whose failure CI exists to catch. Kept deliberately to unambiguous
 # test/lint/build/typecheck invocations so a tolerated side-step isn't swept in.
@@ -40,34 +40,22 @@ def _is_true(value: object) -> bool:
     return value is True or (isinstance(value, str) and value.strip().lower() == "true")
 
 
-def _step_text(step: dict) -> str:
-    return "\n".join(
-        step[key] for key in ("run", "uses", "name") if isinstance(step.get(key), str)
-    )
-
-
 @check("ci-continue-on-error", needs=("clone",))
 def ci_continue_on_error(ctx: RepoContext):
     offenders: list[str] = []
-    for path in workflow_files(ctx.workdir):
-        workflow = parse_workflow(path)
-        if not workflow:
-            continue
-        for jid, job in (workflow.get("jobs") or {}).items():
-            if not isinstance(job, dict):
+    for path, jid, job in iter_jobs(ctx.workdir):
+        label = job.get("name") or jid
+        if _is_true(job.get("continue-on-error")):
+            offenders.append(f"{path.name}: job '{label}'")
+            continue  # the whole job already leaks; don't also list its steps
+        for step in job.get("steps") or []:
+            if not isinstance(step, dict):
                 continue
-            label = job.get("name") or jid
-            if _is_true(job.get("continue-on-error")):
-                offenders.append(f"{path.name}: job '{label}'")
-                continue  # the whole job already leaks; don't also list its steps
-            for step in job.get("steps") or []:
-                if not isinstance(step, dict):
-                    continue
-                if _is_true(step.get("continue-on-error")) and GATING.search(
-                    _step_text(step)
-                ):
-                    name = step.get("name") or step.get("run") or step.get("uses") or ""
-                    offenders.append(f"{path.name}: '{name.splitlines()[0][:60]}'")
+            if _is_true(step.get("continue-on-error")) and GATING.search(
+                step_text(step)
+            ):
+                name = step.get("name") or step.get("run") or step.get("uses") or ""
+                offenders.append(f"{path.name}: '{name.splitlines()[0][:60]}'")
     if offenders:
         return failed(
             "continue-on-error on gating steps hides failures: " + ", ".join(offenders),

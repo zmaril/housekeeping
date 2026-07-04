@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 import re
+from collections.abc import Iterator
 from pathlib import Path
 
 import yaml
@@ -87,6 +88,25 @@ def triggers(workflow: dict) -> set[str]:
     if isinstance(on, dict):
         return set(on.keys())
     return set()
+
+
+def iter_jobs(workdir: Path) -> Iterator[tuple[Path, str, dict]]:
+    """Every `(workflow path, job id, job dict)` across all workflows — the common
+    walk shared by the CI checks, so none of them re-open and re-parse by hand."""
+    for path in workflow_files(workdir):
+        workflow = parse_workflow(path)
+        if not workflow:
+            continue
+        for jid, job in (workflow.get("jobs") or {}).items():
+            if isinstance(job, dict):
+                yield path, jid, job
+
+
+def step_text(step: dict) -> str:
+    """A step's `run` / `uses` / `name` strings joined, for signal matching."""
+    return "\n".join(
+        step[key] for key in ("run", "uses", "name") if isinstance(step.get(key), str)
+    )
 
 
 def run_commands(workflow: dict) -> str:
