@@ -147,7 +147,7 @@ of installing the plugin.
 
 ## Design
 
-See [DESIGN.md](DESIGN.md).
+See [notes/design.md](notes/design.md).
 
 ## Contributing
 
@@ -157,7 +157,7 @@ when it shouldn't, or a skip that deserves a better note. Concrete examples
 beat descriptions.
 
 New checks are one module in `src/housekeeper/checks/` — see the check
-contract in [DESIGN.md](DESIGN.md). House rules: checks are read-only, fixes
+contract in [notes/design.md](notes/design.md). House rules: checks are read-only, fixes
 explain themselves and confirm before touching anything, and skips say why.
 PR titles follow [conventional commits](https://www.conventionalcommits.org)
 (`type(scope): summary`) — CI enforces it, and squash merges inherit the

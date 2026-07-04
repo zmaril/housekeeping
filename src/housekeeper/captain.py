@@ -45,10 +45,17 @@ class Member:
 
 
 @dataclass
+class RequiredFile:
+    path: str
+    scope: str = "all"  # all | public | private
+
+
+@dataclass
 class Manifest:
     name: str
     members: list[Member]
     policy_checks: dict[str, str] = field(default_factory=dict)
+    required_files: list[RequiredFile] = field(default_factory=list)
 
 
 def load_manifest(path: Path) -> Manifest:
@@ -58,10 +65,18 @@ def load_manifest(path: Path) -> Manifest:
                for m in data.get("member", [])]
     if not members:
         raise ValueError(f"{path}: no [[member]] entries")
+    policy = data.get("policy", {})
+    required = [RequiredFile(path=f["path"], scope=f.get("scope", "all"))
+                for f in policy.get("required-file", [])]
+    for rf in required:
+        if rf.scope not in ("all", "public", "private"):
+            raise ValueError(f"{path}: required-file scope {rf.scope!r} "
+                             "must be all, public, or private")
     return Manifest(
         name=data.get("name", path.stem),
         members=members,
-        policy_checks=data.get("policy", {}).get("checks", {}),
+        policy_checks=policy.get("checks", {}),
+        required_files=required,
     )
 
 
@@ -131,7 +146,8 @@ def policy_conflicts(ctx: RepoContext, policy: dict[str, str]) -> list[str]:
     ]
 
 
-def captain_member(ctx: RepoContext, policy: dict[str, str]) -> MemberReport:
+def captain_member(ctx: RepoContext, policy: dict[str, str],
+                   required_files: list[RequiredFile] | None = None) -> MemberReport:
     found = find_housekeeping_workflow(ctx)
     if found is None:
         return MemberReport(ctx.repo, "fail",
@@ -142,6 +158,13 @@ def captain_member(ctx: RepoContext, policy: dict[str, str]) -> MemberReport:
     missing = REQUIRED_TRIGGERS - trigger_set
     if missing:
         problems.append(f"workflow missing triggers: {', '.join(sorted(missing))}")
+
+    for required in required_files or []:
+        if required.scope != "all" and ctx.visibility != required.scope:
+            continue
+        if ctx.try_api(f"repos/{ctx.repo}/contents/{required.path}") is None:
+            problems.append(f"missing {required.path} "
+                            f"(fleet policy for {required.scope} repos)")
 
     conclusion, url = latest_run_conclusion(ctx, workflow_path)
     if conclusion == "no-runs":

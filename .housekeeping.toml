@@ -2,7 +2,3 @@
 [checks]
 website = "off"
 conventional-commits = "required"  # adopted 2026-07-04; default is recommended
-
-[stray-files]
-# deliberate root file: the design doc
-allow = ["DESIGN.md"]

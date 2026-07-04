@@ -2,6 +2,18 @@
 
 Notable changes to housekeeping, newest first.
 
+## v1.3.0 — 2026-07-04
+
+- `stray-files` grew a location policy: one todo pile (default `todo.txt`),
+  notes corralled in one directory (default `notes/`), everything
+  configurable — strays now get a destination, not just an accusation, and
+  a second todo pile is called what it is.
+- Fleet captains can require files: `[[policy.required-file]]` with `path`
+  and `scope` (all/public/private) in housecaptain.toml — e.g. every open
+  source member must carry `notes/design.md`.
+- Our own design doc practices what the fleet now preaches: DESIGN.md moved
+  to notes/design.md.
+
 ## 2026-07-04
 
 - todo.txt retired: the fleet ledger is housecaptain.toml in

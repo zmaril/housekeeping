@@ -24,7 +24,7 @@ How agents work in this repo. The human is Zack; the taste is his.
 
 ## Writing checks
 
-See the check contract in [DESIGN.md](DESIGN.md). House rules: checks are
+See the check contract in [notes/design.md](notes/design.md). House rules: checks are
 read-only; fixes explain what and why, confirm before touching anything,
 write to `housekeeping/<check>` branches, and never push to a default
 branch. Skips always say why. Caps on coverage are stated in the output,
