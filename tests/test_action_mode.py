@@ -76,16 +76,23 @@ def test_ci_green_excludes_the_hosting_workflow(monkeypatch):
     assert "not grading 'housekeeping'" in result.note
 
 
-def test_ci_green_grades_housekeeping_workflow_when_outside(monkeypatch):
+def test_ci_green_never_grades_family_workflows(monkeypatch):
+    # Self-audit and captain grading each other deadlocks the pair red;
+    # the family is excluded by name even outside Actions.
     from test_ci_green import FakeCtx as WorkflowsCtx
 
     monkeypatch.delenv("GITHUB_WORKFLOW", raising=False)
     ctx = WorkflowsCtx(
         [{"id": 2, "name": "housekeeping", "path": ".github/workflows/housekeeping.yml",
+          "state": "active"},
+         {"id": 3, "name": "housecaptain", "path": ".github/workflows/housecaptain.yml",
           "state": "active"}],
-        {2: {"conclusion": "failure", "html_url": "u"}},
+        {2: {"conclusion": "failure", "html_url": "u"},
+         3: {"conclusion": "failure", "html_url": "u"}},
     )
-    assert ci_green(ctx).status == Status.FAIL
+    result = ci_green(ctx)
+    assert result.status == Status.SKIP
+    assert "housecaptain" in result.note and "housekeeping" in result.note
 
 
 def test_render_markdown_escapes_pipes():

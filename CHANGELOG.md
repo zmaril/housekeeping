@@ -2,6 +2,13 @@
 
 Notable changes to housekeeping, newest first.
 
+## v1.2.2 — 2026-07-04
+
+- `ci-green` never grades housekeeping-family workflows (self-audit,
+  captain): on a flagship carrying both, each graded the other and one red
+  deadlocked the pair — red because the other was red, forever. The family
+  audits the repo; ci-green grades the repo's own CI.
+
 ## v1.2.1 — 2026-07-04
 
 - The captain no longer mistakes a member's captain workflow for its

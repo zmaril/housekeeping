@@ -179,15 +179,25 @@ def ci_green(ctx: RepoContext):
     When running INSIDE a workflow (the housekeeping action), that workflow
     grades itself one run behind: one transient red and every later run fails
     because the previous one did, forever. Exclude the hosting workflow.
+
+    Housekeeping-family workflows (the self-audit, the fleet captain) are
+    excluded by name for the same reason one level up: on a repo carrying
+    both, each grades the other and a single red deadlocks the pair — red
+    because the other is red, forever. The family audits the repo; ci-green
+    grades the repo's OWN CI. The captain grades the self-audit explicitly,
+    and a red captain is its own alarm.
     """
     hosting = os.environ.get("GITHUB_WORKFLOW")
+    family = {"housekeeping", "housecaptain"}
     workflows = ctx.api(f"repos/{ctx.repo}/actions/workflows").get("workflows", [])
     real = [w for w in workflows
             if w.get("path", "").startswith(".github/workflows/")
             and w.get("state") == "active"
-            and w.get("name") != hosting]
+            and w.get("name") != hosting
+            and w.get("name") not in family]
     if not real:
-        return skipped("no workflows", note="ci-exists covers the absence of CI")
+        return skipped("no workflows to grade beyond housekeeping's own",
+                       note="ci-exists covers the absence of CI")
 
     red, green, quiet = [], [], []
     for workflow in real:
@@ -206,8 +216,10 @@ def ci_green(ctx: RepoContext):
     notes = []
     if quiet:
         notes.append(f"no completed {ctx.default_branch} runs yet for: {', '.join(quiet)}")
-    if hosting and any(w.get("name") == hosting for w in workflows):
-        notes.append(f"not grading {hosting!r} — this check runs inside it")
+    excluded = sorted({w.get("name", "") for w in workflows
+                       if w.get("name") in family or w.get("name") == hosting})
+    if excluded:
+        notes.append(f"not grading housekeeping-family/hosting workflows: {', '.join(excluded)}")
     note = "; ".join(notes)
     if red:
         return failed(f"red on {ctx.default_branch}: {'; '.join(red)}", note)
