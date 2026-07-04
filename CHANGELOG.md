@@ -2,6 +2,11 @@
 
 Notable changes to housekeeping, newest first.
 
+## 2026-07-04
+
+- todo.txt retired: the fleet ledger is housecaptain.toml in
+  zmaril/powderworks now (parked members carry their reasons on the roster).
+
 ## v1.2.2 — 2026-07-04
 
 - `ci-green` never grades housekeeping-family workflows (self-audit,
