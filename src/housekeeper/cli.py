@@ -164,7 +164,8 @@ def cmd_captain(args) -> int:
                                         note=member.note))
             continue
         try:
-            report = captain_member(RepoContext(member.repo), manifest.policy_checks)
+            report = captain_member(RepoContext(member.repo), manifest.policy_checks,
+                                    manifest.required_files)
         except GhError as e:
             report = MemberReport(member.repo, "error", f"api error: {e}")
         if member.note and not report.note:

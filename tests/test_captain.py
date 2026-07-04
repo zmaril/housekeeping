@@ -19,6 +19,10 @@ parked = true
 
 [policy.checks]
 conventional-commits = "required"
+
+[[policy.required-file]]
+path = "notes/design.md"
+scope = "public"
 """
 
 GOOD_WORKFLOW = """\
@@ -45,10 +49,11 @@ def b64(text):
 class FleetCtx:
     default_branch = "main"
 
-    def __init__(self, repo="o/r", files=None, conclusion="success"):
+    def __init__(self, repo="o/r", files=None, conclusion="success", visibility="public"):
         self.repo = repo
         self._files = files or {}
         self._conclusion = conclusion
+        self.visibility = visibility
 
     def api(self, path, params=None):
         if path.endswith("/actions/workflows"):
@@ -79,6 +84,26 @@ def test_manifest_parses(tmp_path):
     assert manifest.members[1].parked is True
     assert manifest.members[0].parked is False
     assert manifest.policy_checks == {"conventional-commits": "required"}
+    assert manifest.required_files[0].path == "notes/design.md"
+    assert manifest.required_files[0].scope == "public"
+
+
+def test_required_file_missing_fails():
+    from housekeeper.captain import RequiredFile
+
+    required = [RequiredFile("notes/design.md", "public")]
+    ctx = FleetCtx(files={".github/workflows/housekeeping.yml": GOOD_WORKFLOW})
+    report = captain_member(ctx, {}, required)
+    assert report.status == "fail"
+    assert "missing notes/design.md" in report.details
+
+    private = FleetCtx(files={".github/workflows/housekeeping.yml": GOOD_WORKFLOW},
+                       visibility="private")
+    assert captain_member(private, {}, required).status == "ok"  # public-scoped
+
+    has_it = FleetCtx(files={".github/workflows/housekeeping.yml": GOOD_WORKFLOW,
+                             "notes/design.md": "# design"})
+    assert captain_member(has_it, {}, required).status == "ok"
 
 
 CAPTAIN_WORKFLOW = """\

@@ -134,7 +134,7 @@ non-skipped check failed.
 | `changelog` | clone | A CHANGELOG file exists (CHANGELOG.md, CHANGES.md, HISTORY.md, …) — presence only; versions, dates, or freeform all fine | Scaffold a newest-first dated stub |
 | `repo-meta` | API | Description set; ≥1 topic; issues enabled | Prompt for values, set via API |
 | `stale` | API | No PRs idle >30 days; no merged-but-undeleted branches; `delete_branch_on_merge` enabled | Enable the setting; delete merged branches (confirm each) |
-| `stray-files` | clone | No stray `.md`/`.txt` at the repo root beyond conventional community files; deliberate keepers via `[stray-files] allow` | none — needs judgment |
+| `stray-files` | clone | One todo pile (default `todo.txt`), notes corralled in one directory (default `notes/`), conventional community files at root, nothing else; all paths configurable, keepers via `[stray-files] allow` | none — needs judgment |
 | `conventional-commits` | clone + API | Enforced in CI (PR-title check or commitlint) and mentioned in README/CONTRIBUTING; recent default-branch adherence reported as a note, never judged retroactively | Set squash-title-from-PR-title; add the PR-title workflow |
 
 Ecosystem detection lives once in `context.py` (look for `Cargo.toml`,
@@ -168,7 +168,9 @@ fires on pull_request + push + schedule, its latest default-branch run is
 green, and the member's `.housekeeping.toml` doesn't contradict fleet policy.
 Policy divergence is a surfaced conflict, never silently resolved — a fleet
 policy that silently loses is theater, one that silently wins breaks the
-repo-knows-itself principle. `housekeeper fleet` is the deep local audit
+repo-knows-itself principle. Fleets can also require files to exist
+(`[[policy.required-file]]` with `path` and `scope` = all/public/private —
+e.g. every open source member carries `notes/design.md`). `housekeeper fleet` is the deep local audit
 over the same manifest. Captain-driven fixes deliberately don't exist;
 fixing stays one-repo and interactive.
 
