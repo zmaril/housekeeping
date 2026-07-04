@@ -2,6 +2,24 @@
 
 Notable changes to housekeeping, newest first.
 
+## v1.7.0 — 2026-07-04
+
+- `required-checks` check (required): the default branch must actually *require*
+  every status check that runs on a PR — not just require PRs. Branch protection
+  can require a PR yet require no status checks, so a red CI run doesn't block the
+  merge and the gate is theatre. Reads the ruleset's (and classic protection's)
+  required contexts and compares them to the check-run names the repo's own PR
+  workflows post; a check that runs but isn't required fails. Fan-out helper jobs
+  (a paths-filter `changes` job, which carries `outputs:`) aren't counted. Fixable:
+  writes the required set into the default-branch ruleset.
+- `ci-scoped` check (recommended): heavy CI jobs shouldn't run on every PR
+  regardless of what changed. A job that apt-installs system libraries or runs a
+  native compiler (cargo/go/docker/xcode) on `pull_request` without scoping — a
+  workflow `paths:` filter, a job `if:`, or a `needs:` on a fan-out job — is
+  flagged. Once checks are required, an unscoped compile is minutes you can't merge
+  past; a job-level `if:` keeps it a *skipped* (green) required check on unrelated
+  PRs, so scoping stays required-check-safe.
+
 ## v1.6.0 — 2026-07-04
 
 - Multi-language CI coverage: `ci-exists` now demands test, lint, AND fmt
