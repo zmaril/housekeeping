@@ -81,7 +81,17 @@ note = "pre-release, in flux"
 
 [policy.checks]
 conventional-commits = "required"
+
+[policy]
+locked = ["checks.stray-files", "stray-files.allow"]
 ```
+
+Policy is expectation (divergence surfaced as a conflict) unless **locked**:
+members declare `fleet = "owner/repo"` in their `.housekeeping.toml`, their
+own audits fetch the manifest and enforce locked keys as law — a PR that
+sets a locked key fails its own CI, so nobody excepts themselves in the same
+diff that adds the mess. Locking requires a top-level `captain = "owner/repo"`
+in the manifest; the captain flags members that don't declare their fleet.
 
 `housekeeper captain` (or the action with `captain: housecaptain.toml`) is
 the API-only delegation check: each member has a housekeeping workflow, it

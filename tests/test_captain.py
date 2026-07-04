@@ -202,6 +202,69 @@ def test_dispatch_outcomes():
         DispatchCtx(status=403), ".github/workflows/housekeeping.yml")
 
 
+LOCKED_MANIFEST = MANIFEST.replace(
+    'name = "powderworks"',
+    'name = "powderworks"\ncaptain = "zmaril/powderworks"',
+) + '\n[policy]\nlocked = ["checks.stray-files", "stray-files.allow"]\n'
+
+
+def test_locked_manifest_parses_and_requires_captain(tmp_path):
+    import pytest as _pytest
+
+    path = tmp_path / "housecaptain.toml"
+    path.write_text(LOCKED_MANIFEST)
+    manifest = load_manifest(path)
+    assert manifest.locked == ["checks.stray-files", "stray-files.allow"]
+    assert manifest.captain == "zmaril/powderworks"
+
+    path.write_text(MANIFEST + '\n[policy]\nlocked = ["checks.stray-files"]\n')
+    with _pytest.raises(ValueError, match="captain"):
+        load_manifest(path)
+
+
+def test_lock_violations_pure():
+    from housekeeper.captain import lock_violations
+
+    config = {"checks": {"stray-files": "off"}, "stray-files": {"allow": ["x.md"]}}
+    locked = ["checks.stray-files", "stray-files.allow", "checks.website"]
+    assert lock_violations(config, locked) == ["checks.stray-files", "stray-files.allow"]
+    assert lock_violations({}, locked) == []
+
+
+def test_captain_flags_locked_overrides_and_missing_fleet_declaration():
+    locked = ["stray-files.allow"]
+    sneaky = FleetCtx(files={
+        ".github/workflows/housekeeping.yml": GOOD_WORKFLOW,
+        ".housekeeping.toml": 'fleet = "zmaril/powderworks"\n'
+                              '[stray-files]\nallow = ["scratch.md"]\n',
+    })
+    report = captain_member(sneaky, {}, None, locked, "zmaril/powderworks")
+    assert report.status == "conflict"
+    assert "locked by fleet policy" in report.details
+
+    undeclared = FleetCtx(files={".github/workflows/housekeeping.yml": GOOD_WORKFLOW})
+    report = captain_member(undeclared, {}, None, locked, "zmaril/powderworks")
+    assert report.status == "conflict"
+    assert 'declare fleet' in report.details
+
+    lawful = FleetCtx(files={
+        ".github/workflows/housekeeping.yml": GOOD_WORKFLOW,
+        ".housekeeping.toml": 'fleet = "zmaril/powderworks"\n',
+    })
+    assert captain_member(lawful, {}, None, locked, "zmaril/powderworks").status == "ok"
+
+
+def test_apply_locked_is_law():
+    from housekeeper.config import Config
+
+    config = Config({"checks": {"stray-files": "off"},
+                     "stray-files": {"allow": ["scratch.md"]}})
+    config.apply_locked(["checks.stray-files", "stray-files.allow"],
+                        {"stray-files": "required"})
+    assert config.severity("stray-files", "public") == "required"
+    assert config.section("stray-files").get("allow") is None
+
+
 def test_policy_silence_and_agreement_are_fine():
     silent = FleetCtx(files={".github/workflows/housekeeping.yml": GOOD_WORKFLOW})
     assert policy_conflicts(silent, {"conventional-commits": "required"}) == []

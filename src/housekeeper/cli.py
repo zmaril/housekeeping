@@ -56,7 +56,10 @@ def audit(repo: str, only: str | None = None) -> dict:
     if any("clone" in c.needs for c in selected):
         ctx.ensure_workdir()
 
+    from .captain import fleet_lock_rows
+
     rows = []
+    rows.extend(fleet_lock_rows(ctx))
     unknown = ctx.config.unknown_keys(set(CHECKS))
     if unknown:
         rows.append({
@@ -183,7 +186,8 @@ def cmd_captain(args) -> int:
         contexts[member.repo] = ctx = RepoContext(member.repo)
         try:
             report = captain_member(ctx, manifest.policy_checks,
-                                    manifest.required_files)
+                                    manifest.required_files,
+                                    manifest.locked, manifest.captain)
         except GhError as e:
             report = MemberReport(member.repo, "error", f"api error: {e}")
         if member.note and not report.note:

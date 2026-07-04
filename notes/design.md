@@ -170,7 +170,11 @@ Policy divergence is a surfaced conflict, never silently resolved — a fleet
 policy that silently loses is theater, one that silently wins breaks the
 repo-knows-itself principle. Fleets can also require files to exist
 (`[[policy.required-file]]` with `path` and `scope` = all/public/private —
-e.g. every open source member carries `notes/design.md`). `housekeeper fleet` is the deep local audit
+e.g. every open source member carries `notes/design.md`). Policy escalates
+from expectation to law via `[policy] locked`: members that declare their
+fleet enforce locked keys in their own audits at PR time (self-excepting
+diffs fail their own CI), and the captain backstops removal of the fleet
+declaration itself — the one escape in-repo enforcement can't close. `housekeeper fleet` is the deep local audit
 over the same manifest. Captain-driven fixes deliberately don't exist;
 fixing stays one-repo and interactive.
 

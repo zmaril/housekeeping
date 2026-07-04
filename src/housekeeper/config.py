@@ -76,9 +76,34 @@ class Config:
         housekeeping. Surfaced, never silently ignored."""
         problems = []
         for section in self._repo:
-            if section != "checks" and section not in known_checks:
+            if section not in ("checks", "fleet") and section not in known_checks:
                 problems.append(f"[{section}]")
         for check_name in self._repo.get("checks", {}):
             if check_name not in known_checks:
                 problems.append(f"checks.{check_name}")
         return sorted(problems)
+
+    @property
+    def fleet(self) -> str:
+        """The captain repo this member belongs to, if declared."""
+        value = self._repo.get("fleet", "")
+        return value if isinstance(value, str) else ""
+
+    @property
+    def raw(self) -> dict[str, Any]:
+        return self._repo
+
+    def apply_locked(self, locked: list[str], policy_checks: dict[str, str]) -> None:
+        """Locked keys are fleet law: local values are discarded, and locked
+        check severities come from fleet policy (or defaults)."""
+        for key in locked:
+            section, _, leaf = key.partition(".")
+            if section == "checks":
+                if leaf in policy_checks:
+                    self._repo.setdefault("checks", {})[leaf] = policy_checks[leaf]
+                else:
+                    self._repo.get("checks", {}).pop(leaf, None)
+            else:
+                table = self._repo.get(section)
+                if isinstance(table, dict):
+                    table.pop(leaf, None)
