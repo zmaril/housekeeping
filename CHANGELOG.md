@@ -2,6 +2,26 @@
 
 Notable changes to housekeeping, newest first.
 
+## v1.9.0 — 2026-07-04
+
+- `ci-continue-on-error` check (required): a test/lint/build step must not be
+  allowed to fail silently. `continue-on-error: true` lets a step (or a whole job)
+  fail while the workflow still reports success — on a step that runs the tests,
+  the linter, or the build, CI goes green while the thing it exists to catch is
+  red. Flagged on any job marked `continue-on-error`, and on steps whose command is
+  an unambiguous test/lint/build invocation; a genuinely tolerable step is excepted
+  via `.housekeeping.toml`. Grounded in Dan Luu's *broken-builds*.
+- `reproducible-toolchain` check (required): CI must not build on a floating
+  toolchain version. `node-version: latest`, `python-version: '*'`, an `x`-style
+  wildcard on a `setup-*` step means the same commit builds differently tomorrow —
+  silent bitrot when the upstream default moves. Bounded channels (Go's `stable`,
+  `dtolnay/rust-toolchain@stable`) are intentionally allowed. Grounded in Dan Luu's
+  *everything-is-broken* (reproducibility).
+- `codeowners` check (recommended): a non-empty CODEOWNERS routes review to whoever
+  knows the code. Checks the three GitHub-honoured locations for at least one real
+  ownership rule; softens to recommended since it's ceremony on a solo repo.
+  Fixable: scaffolds `.github/CODEOWNERS` with a catch-all owner.
+
 ## v1.8.0 — 2026-07-04
 
 - Fleet check-matrix dashboard: `housekeeper fleet --html FILE` writes a

@@ -1,16 +1,11 @@
+from conftest import write_wf
+
 from housekeeper.checks.required_checks import (
     pr_check_jobs,
     required_checks,
     required_contexts,
 )
 from housekeeper.registry import Status
-
-
-def write_wf(tmp_path, name, content):
-    d = tmp_path / ".github" / "workflows"
-    d.mkdir(parents=True, exist_ok=True)
-    (d / name).write_text(content)
-
 
 CI = """\
 name: CI
