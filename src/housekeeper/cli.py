@@ -148,7 +148,7 @@ def load_manifest_or_exit(path_arg: str | None):
 
 
 CAPTAIN_STYLE = {"ok": ("✓", "green"), "fail": ("✗", "red"),
-                 "conflict": ("⚡", "yellow"), "error": ("!", "yellow")}
+                 "conflict": ("≠", "yellow"), "error": ("!", "yellow")}
 
 
 def cmd_captain(args) -> int:
