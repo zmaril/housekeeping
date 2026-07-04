@@ -1,6 +1,15 @@
 # Changelog
 
-Notable changes to housekeeping, newest first. Entries are dated; releases
+Notable changes to housekeeping, newest first.
+
+## v1.2.0 — 2026-07-04
+
+- `conventional-commits` check (recommended; required on this repo): enforced
+  in CI and documented, with recent-adherence as a note — history is never
+  judged retroactively. The fix sets squash merges to title from the PR
+  title and adds a dependency-free PR-title workflow, so future main history
+  is conventional by construction.
+- This repo now enforces conventional PR titles on itself. Entries are dated; releases
 that matter to Action consumers also get a version, because `uses:` resolves
 tags — `v1` moves with compatible releases, `vX.Y.Z` tags are immutable. For
 the CLI, plugin, and skill, the git SHA remains the real version.

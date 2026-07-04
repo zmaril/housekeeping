@@ -132,6 +132,9 @@ beat descriptions.
 New checks are one module in `src/housekeeper/checks/` — see the check
 contract in [DESIGN.md](DESIGN.md). House rules: checks are read-only, fixes
 explain themselves and confirm before touching anything, and skips say why.
+PR titles follow [conventional commits](https://www.conventionalcommits.org)
+(`type(scope): summary`) — CI enforces it, and squash merges inherit the
+title, so main's history stays machine-readable.
 `uv run pytest` and `uv run ruff check .` before pushing; CI also runs
 [straitjacket](https://github.com/zmaril/Straitjacket) on everything,
 prose included.

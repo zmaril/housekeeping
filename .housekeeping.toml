@@ -1,6 +1,7 @@
 # housekeeping, on itself: no website — the repo is the product.
 [checks]
 website = "off"
+conventional-commits = "required"  # adopted 2026-07-04; default is recommended
 
 [stray-files]
 # deliberate root files: the design doc and the fleet-audit backlog
