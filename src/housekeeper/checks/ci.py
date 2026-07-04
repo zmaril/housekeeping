@@ -90,13 +90,18 @@ def triggers(workflow: dict) -> set[str]:
     return set()
 
 
-def iter_jobs(workdir: Path) -> Iterator[tuple[Path, str, dict]]:
-    """Every `(workflow path, job id, job dict)` across all workflows — the common
-    walk shared by the CI checks, so none of them re-open and re-parse by hand."""
+def workflows(workdir: Path) -> Iterator[tuple[Path, dict]]:
+    """Every `(path, parsed workflow)` — the shared walk, so no CI check re-opens
+    and re-parses the workflow directory by hand."""
     for path in workflow_files(workdir):
         workflow = parse_workflow(path)
-        if not workflow:
-            continue
+        if workflow:
+            yield path, workflow
+
+
+def iter_jobs(workdir: Path) -> Iterator[tuple[Path, str, dict]]:
+    """Every `(workflow path, job id, job dict)` across all workflows."""
+    for path, workflow in workflows(workdir):
         for jid, job in (workflow.get("jobs") or {}).items():
             if isinstance(job, dict):
                 yield path, jid, job
