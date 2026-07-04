@@ -81,7 +81,7 @@ def render_matrix(
             continue
         by_check = {r["check"]: r for r in payload["results"]}
         logo = logo_url(repo, payload.get("logo", ""))
-        cells = []
+        parts = []
         for col in columns:
             row = by_check.get(col)
             outcome = _outcome(row) if row else "none"
@@ -89,8 +89,8 @@ def render_matrix(
             title = (
                 html.escape(f"{col}: {row['details']}") if row else f"{col}: not run"
             )
-            cells.append(f'<td class="{cls}" title="{title}">{glyph}</td>')
-        body_rows.append(_row(repo_href, short, logo, "".join(cells)))
+            parts.append(f'<td class="{cls}" title="{title}">{glyph}</td>')
+        body_rows.append(_row(repo_href, short, logo, "".join(parts)))
 
     legend = " ".join(
         f'<span class="tag {cls}">{html.escape(label)}</span>' for cls, label in LEGEND
