@@ -1,3 +1,5 @@
+fleet = "zmaril/powderworks"
+
 # housekeeping, on itself: no website — the repo is the product.
 [checks]
 website = "off"
