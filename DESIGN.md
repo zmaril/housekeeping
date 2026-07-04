@@ -157,6 +157,21 @@ private repos needs a paid plan, that check reports skip-with-note
 ("unavailable on this plan") rather than failing. Engineering hygiene —
 CI, lockfiles, dependabot, secret scanning — stays required everywhere.
 
+## Fleet captain
+
+Repos audit themselves (the action); the captain checks the auditors are on
+duty — delegation, not duplication. A captain repo (zmaril/powderworks for
+this fleet) carries `housecaptain.toml`: `[[member]]` entries plus optional
+`[policy.checks]`. `housekeeper captain` is the API-only delegation check
+that runs in the captain's CI: per member, a housekeeping workflow exists,
+fires on pull_request + push + schedule, its latest default-branch run is
+green, and the member's `.housekeeping.toml` doesn't contradict fleet policy.
+Policy divergence is a surfaced conflict, never silently resolved — a fleet
+policy that silently loses is theater, one that silently wins breaks the
+repo-knows-itself principle. `housekeeper fleet` is the deep local audit
+over the same manifest. Captain-driven fixes deliberately don't exist;
+fixing stays one-repo and interactive.
+
 ## Skills layer
 
 One skill, **`tidy-up`** (installed via plugin as `/housekeeping:tidy-up`, or

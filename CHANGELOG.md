@@ -4,6 +4,12 @@ Notable changes to housekeeping, newest first.
 
 ## v1.2.0 — 2026-07-04
 
+- Fleet captain: `housecaptain.toml` names a fleet; `housekeeper captain`
+  (API-only, also the action's `captain:` input) checks every member is
+  auditing itself — workflow present, triggers complete, latest run green —
+  and surfaces fleet-policy vs member-config conflicts instead of silently
+  resolving them. `housekeeper fleet` runs the full audit across all
+  members locally with a scoreboard.
 - `typecheck` check (required): if the language supports typechecking, it
   must run in CI — TypeScript (tsc and kin), Python (mypy/pyright/ty),
   Clojure (clj-kondo/core.typed); untyped JavaScript fails with guidance to
