@@ -81,10 +81,40 @@ def test_manifest_parses(tmp_path):
     assert manifest.policy_checks == {"conventional-commits": "required"}
 
 
+CAPTAIN_WORKFLOW = """\
+name: housecaptain
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 8 * * 1"
+jobs:
+  captain:
+    steps:
+      - uses: zmaril/housekeeping@v1
+        with:
+          captain: housecaptain.toml
+"""
+
+
 def test_self_auditing_member_is_ok():
     ctx = FleetCtx(files={".github/workflows/housekeeping.yml": GOOD_WORKFLOW})
     report = captain_member(ctx, {})
     assert report.status == "ok", report.details
+
+
+def test_captain_workflow_is_not_mistaken_for_self_audit():
+    # The flagship has both; the captain workflow sorts first alphabetically
+    # and also contains housekeeping@ — it must not satisfy the check.
+    ctx = FleetCtx(files={
+        ".github/workflows/housecaptain.yml": CAPTAIN_WORKFLOW,
+        ".github/workflows/housekeeping.yml": GOOD_WORKFLOW,
+    })
+    report = captain_member(ctx, {})
+    assert report.status == "ok", report.details
+
+    only_captain = FleetCtx(files={".github/workflows/housecaptain.yml": CAPTAIN_WORKFLOW})
+    assert captain_member(only_captain, {}).status == "fail"
 
 
 def test_member_without_workflow_fails():

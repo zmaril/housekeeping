@@ -2,6 +2,12 @@
 
 Notable changes to housekeeping, newest first.
 
+## v1.2.1 — 2026-07-04
+
+- The captain no longer mistakes a member's captain workflow for its
+  self-audit (both use the action; found on the flagship itself, where
+  housecaptain.yml sorts before housekeeping.yml).
+
 ## v1.2.0 — 2026-07-04
 
 - Fleet captain: `housecaptain.toml` names a fleet; `housekeeper captain`

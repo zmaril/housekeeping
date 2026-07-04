@@ -27,6 +27,10 @@ REQUIRED_TRIGGERS = {"pull_request", "push", "schedule"}
 
 
 def is_housekeeping_workflow(repo: str, text: str) -> bool:
+    # A captain workflow also uses the action, but it audits the fleet,
+    # not this repo — don't mistake it for the self-audit.
+    if "captain:" in text:
+        return False
     if "housekeeping@" in text:
         return True
     # housekeeping's own repo runs the action as `uses: ./`
