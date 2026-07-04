@@ -10,7 +10,9 @@ SEVERITIES = ("required", "recommended", "off")
 
 DEFAULT_SEVERITY = {
     "branch-protection": "required",
+    "required-checks": "required",
     "ci-exists": "required",
+    "ci-scoped": "recommended",
     "ci-green": "required",
     "typecheck": "required",
     "builds": "required",
