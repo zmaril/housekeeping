@@ -4,8 +4,11 @@ housekeeping skill.
 
 [ ] zmaril/entl — last audit 2026-07-03: no CI, no dependabot.yml, no LICENSE,
     entl.dev unreachable, no topics. Pre-release, revisit after it stabilizes.
-[ ] zmaril/Straitjacket — clean except taste: run the tidy-up skill's README pass.
-[ ] zmaril/powdermonkey — never audited.
+[x] zmaril/Straitjacket — all 18 checks green as of 2026-07-04. lint+test
+    required on main, marketplace badge up, branches swept.
+[x] zmaril/powdermonkey — all green as of 2026-07-04 (website off until
+    firetheslopcannon.com is live — flip it in .housekeeping.toml when up).
+    Runs the housekeeping action weekly + on push/PR.
 [ ] zmaril/plates — never audited.
 [ ] zmaril/philologist-lsp — never audited.
 [ ] zmaril/skop — never audited.
