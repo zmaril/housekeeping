@@ -5,8 +5,12 @@ that matter to Action consumers also get a version, because `uses:` resolves
 tags — `v1` moves with compatible releases, `vX.Y.Z` tags are immutable. For
 the CLI, plugin, and skill, the git SHA remains the real version.
 
-## 2026-07-03 (post-v1.0.1)
+## v1.1.0 — 2026-07-04
 
+- `ci-exists` resolves `bun/npm/pnpm/yarn run <script>` through package.json
+  scripts before pattern-matching, so a linter hidden behind `bun run check`
+  counts (found live on powdermonkey — its first Action run failed on the
+  false negative because `v1` predated the fix; this release ships it).
 - `stray-files` check (recommended): no scratch `.md`/`.txt` piling up at the
   repo root; conventional community files and `[stray-files] allow` excepted.
 - `stale` now checks `delete_branch_on_merge` and gained a fix: enable the
