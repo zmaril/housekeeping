@@ -2,6 +2,24 @@
 
 Notable changes to housekeeping, newest first.
 
+## v1.6.0 — 2026-07-04
+
+- Multi-language CI coverage: `ci-exists` now demands test, lint, AND fmt
+  signals per detected language (rust, js, python, ruby, go) — a repo whose
+  CI only exercises one of its languages fails with named gaps. Combined
+  tools (biome, rubocop) satisfy lint+fmt for their language.
+- Ruby joins ecosystem detection: Gemfile/Gemfile.lock, bundler dependabot
+  coverage, rubocop/rspec signals, lockfile presence checked.
+- `builds` check (required): every build target must actually run in CI —
+  package.json `build*` scripts per PR (transitive script resolution), and
+  tauri needs a per-PR compile check plus a scheduled full build. Born from
+  a repo whose broken build:web sailed through green merges.
+- `codegen-drift` check (required, config-declared): `[[codegen]]` entries
+  in .housekeeping.toml name regen commands; CI must run each and assert
+  zero diff afterward, so committed bindgen output can't drift.
+- Dogfood: housekeeping's own CI gained `ruff format --check` and the
+  codebase is now ruff-formatted.
+
 ## v1.5.0 — 2026-07-04
 
 - Policy locks: `[policy] locked = [...]` (plus a top-level `captain =

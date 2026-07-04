@@ -7,7 +7,9 @@ class StaleCtx:
     default_branch = "main"
 
     def __init__(self, auto_delete, branches=(), merged=()):
-        self.repo_info = {} if auto_delete is None else {"delete_branch_on_merge": auto_delete}
+        self.repo_info = (
+            {} if auto_delete is None else {"delete_branch_on_merge": auto_delete}
+        )
         self._branches = list(branches)
         self._merged = set(merged)
 

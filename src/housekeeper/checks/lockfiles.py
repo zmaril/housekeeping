@@ -11,21 +11,35 @@ from ..registry import check, failed, fix_for, passed, skipped
 
 # tool → (sync-check command, regen command)
 COMMANDS = {
-    "cargo": (["cargo", "metadata", "--locked", "--format-version", "1"],
-              ["cargo", "metadata", "--format-version", "1"]),
-    "bun": (["bun", "install", "--frozen-lockfile", "--dry-run"],
-            ["bun", "install"]),
-    "npm": (["npm", "ci", "--dry-run", "--ignore-scripts"],
-            ["npm", "install", "--package-lock-only"]),
-    "pnpm": (["pnpm", "install", "--frozen-lockfile", "--lockfile-only"],
-             ["pnpm", "install", "--lockfile-only"]),
-    "yarn": (["yarn", "install", "--immutable", "--mode=skip-build"],
-             ["yarn", "install", "--mode=skip-build"]),
+    "cargo": (
+        ["cargo", "metadata", "--locked", "--format-version", "1"],
+        ["cargo", "metadata", "--format-version", "1"],
+    ),
+    "bun": (["bun", "install", "--frozen-lockfile", "--dry-run"], ["bun", "install"]),
+    "npm": (
+        ["npm", "ci", "--dry-run", "--ignore-scripts"],
+        ["npm", "install", "--package-lock-only"],
+    ),
+    "pnpm": (
+        ["pnpm", "install", "--frozen-lockfile", "--lockfile-only"],
+        ["pnpm", "install", "--lockfile-only"],
+    ),
+    "yarn": (
+        ["yarn", "install", "--immutable", "--mode=skip-build"],
+        ["yarn", "install", "--mode=skip-build"],
+    ),
     "uv": (["uv", "lock", "--check"], ["uv", "lock"]),
 }
 
-TOOL = {"cargo": "cargo", "bun": "bun", "npm": "npm", "pnpm": "pnpm",
-        "yarn": "yarn", "uv": "uv", "go": "go"}
+TOOL = {
+    "cargo": "cargo",
+    "bun": "bun",
+    "npm": "npm",
+    "pnpm": "pnpm",
+    "yarn": "yarn",
+    "uv": "uv",
+    "go": "go",
+}
 
 
 def tracked(workdir: Path, filename: str) -> bool:
@@ -53,19 +67,26 @@ def lockfiles(ctx: RepoContext):
             continue
         tool = TOOL.get(eco.name)
         command = COMMANDS.get(eco.name)
-        if not command or not tool or not shutil.which(tool):
-            unverified.append(f"{eco.name} ({tool or '?'} not installed)")
+        if not command or not tool:
+            unverified.append(f"{eco.name} (no sync command known)")
+            continue
+        if not shutil.which(tool):
+            unverified.append(f"{eco.name} ({tool} not installed)")
             continue
         proc = run(command[0], cwd=ctx.workdir)
         if proc.returncode != 0:
-            problems.append(f"{eco.name}: {eco.lockfile} out of sync with {eco.manifest}")
+            problems.append(
+                f"{eco.name}: {eco.lockfile} out of sync with {eco.manifest}"
+            )
         else:
             ok.append(eco.name)
 
     note = f"sync unverified for: {', '.join(unverified)}" if unverified else ""
     if problems:
         return failed("; ".join(problems), note)
-    return passed(f"lockfiles committed and in sync: {', '.join(ok) or 'presence only'}", note)
+    return passed(
+        f"lockfiles committed and in sync: {', '.join(ok) or 'presence only'}", note
+    )
 
 
 @fix_for("lockfiles")
@@ -82,7 +103,9 @@ def fix(ctx: RepoContext):
         if not lock.is_file() or run(command[0], cwd=ctx.workdir).returncode != 0:
             stale.append(eco)
     if not stale:
-        console.print("[yellow]nothing regenerable found (missing tools?) — fix by hand[/yellow]")
+        console.print(
+            "[yellow]nothing regenerable found (missing tools?) — fix by hand[/yellow]"
+        )
         return
 
     def write(workdir: Path) -> list[Path]:
@@ -93,17 +116,20 @@ def fix(ctx: RepoContext):
                 continue
             proc = run(COMMANDS[eco.name][1], cwd=workdir)
             if proc.returncode != 0:
-                console.print(f"[red]{eco.name} regen failed:[/red] {proc.stderr.strip()[:500]}")
+                console.print(
+                    f"[red]{eco.name} regen failed:[/red] {proc.stderr.strip()[:500]}"
+                )
                 continue
             changed.append(workdir / lockfile)
         return changed
 
     apply_file_fix(
-        ctx, "lockfiles",
+        ctx,
+        "lockfiles",
         describe=f"regenerate lockfiles for: {', '.join(e.name for e in stale)}",
         why="a committed, in-sync lockfile means every machine and CI run installs "
-            "the exact same versions — out-of-sync lockfiles are how 'works on my "
-            "machine' happens",
+        "the exact same versions — out-of-sync lockfiles are how 'works on my "
+        "machine' happens",
         write_changes=write,
         commit_message="chore: regenerate lockfiles",
     )

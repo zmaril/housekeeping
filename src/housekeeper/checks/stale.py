@@ -30,29 +30,39 @@ def stale(ctx: RepoContext):
 
     cutoff = datetime.now(timezone.utc) - timedelta(days=IDLE_DAYS)
     prs = ctx.api(f"repos/{ctx.repo}/pulls", params={"state": "open", "per_page": 100})
-    idle = [p for p in prs
-            if datetime.fromisoformat(p["updated_at"].replace("Z", "+00:00")) < cutoff]
+    idle = [
+        p
+        for p in prs
+        if datetime.fromisoformat(p["updated_at"].replace("Z", "+00:00")) < cutoff
+    ]
     if idle:
         numbers = ", ".join(f"#{p['number']}" for p in idle[:5])
         problems.append(f"{len(idle)} PR(s) idle >{IDLE_DAYS}d ({numbers})")
 
     merged, total_others = merged_branches(ctx)
     if merged:
-        problems.append(f"{len(merged)} merged branch(es) not deleted: {', '.join(merged[:5])}")
+        problems.append(
+            f"{len(merged)} merged branch(es) not deleted: {', '.join(merged[:5])}"
+        )
     if total_others > MAX_BRANCHES:
         notes.append(f"only first {MAX_BRANCHES} of {total_others} branches examined")
 
     auto_delete = ctx.repo_info.get("delete_branch_on_merge")
     if auto_delete is False:
-        problems.append("merged branches aren't auto-deleted (delete_branch_on_merge off)")
+        problems.append(
+            "merged branches aren't auto-deleted (delete_branch_on_merge off)"
+        )
     elif auto_delete is None:
         notes.append("auto-delete-on-merge setting not visible to this token")
 
     note = "; ".join(notes)
     if problems:
         return failed("; ".join(problems), note)
-    return passed(f"{len(prs)} open PR(s), none idle; no merged branches lingering; "
-                  "merges auto-delete their branch", note)
+    return passed(
+        f"{len(prs)} open PR(s), none idle; no merged branches lingering; "
+        "merges auto-delete their branch",
+        note,
+    )
 
 
 @fix_for("stale")
@@ -64,8 +74,11 @@ def fix(ctx: RepoContext):
             "themselves (and restore is one click on the PR if ever needed)."
         )
         if confirm(f"Enable auto-delete of merged branches on {ctx.repo}?"):
-            ctx.api(f"repos/{ctx.repo}", method="PATCH",
-                    input={"delete_branch_on_merge": True})
+            ctx.api(
+                f"repos/{ctx.repo}",
+                method="PATCH",
+                input={"delete_branch_on_merge": True},
+            )
             console.print("[green]delete_branch_on_merge enabled[/green]")
 
     merged, _ = merged_branches(ctx)

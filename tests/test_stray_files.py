@@ -10,8 +10,14 @@ def ctx_for(tmp_path, overrides=None):
 
 
 def test_conventional_files_pass(tmp_path):
-    for name in ("README.md", "CHANGELOG.md", "CONTRIBUTING.md", "LICENSE.txt",
-                 "CODE_OF_CONDUCT.md", "AGENTS.md"):
+    for name in (
+        "README.md",
+        "CHANGELOG.md",
+        "CONTRIBUTING.md",
+        "LICENSE.txt",
+        "CODE_OF_CONDUCT.md",
+        "AGENTS.md",
+    ):
         (tmp_path / name).write_text("x")
     assert stray_files(ctx_for(tmp_path)).status == Status.PASS
 

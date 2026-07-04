@@ -14,11 +14,25 @@ from ..context import RepoContext
 from ..registry import check, failed, passed
 
 CONVENTIONAL = {
-    "readme", "changelog", "changes", "history",
-    "license", "licence", "copying", "notice",
-    "contributing", "code_of_conduct", "security", "support", "governance",
-    "authors", "maintainers", "citation", "codeowners",
-    "agents", "claude",
+    "readme",
+    "changelog",
+    "changes",
+    "history",
+    "license",
+    "licence",
+    "copying",
+    "notice",
+    "contributing",
+    "code_of_conduct",
+    "security",
+    "support",
+    "governance",
+    "authors",
+    "maintainers",
+    "citation",
+    "codeowners",
+    "agents",
+    "claude",
 }
 
 TODO_STEMS = {"todo", "todos"}
@@ -36,9 +50,11 @@ def stray_files(ctx: RepoContext):
         if not (entry.is_file() and entry.suffix.lower() in (".md", ".txt")):
             continue
         name = entry.name
-        if (name.lower() == todo_file.lower()
-                or entry.stem.lower() in CONVENTIONAL
-                or name.lower() in allow):
+        if (
+            name.lower() == todo_file.lower()
+            or entry.stem.lower() in CONVENTIONAL
+            or name.lower() in allow
+        ):
             continue
         if entry.stem.lower() in TODO_STEMS:
             extra_todo_piles.append(name)
@@ -47,12 +63,16 @@ def stray_files(ctx: RepoContext):
 
     problems = []
     if extra_todo_piles:
-        problems.append(f"second todo pile: {', '.join(sorted(extra_todo_piles))} "
-                        f"— the todo file is {todo_file}")
+        problems.append(
+            f"second todo pile: {', '.join(sorted(extra_todo_piles))} "
+            f"— the todo file is {todo_file}"
+        )
     if strays:
         problems.append(f"stray files at root: {', '.join(sorted(strays))}")
     if problems:
-        return failed("; ".join(problems),
-                      note=f"notes go in {notes_dir}/, todos in {todo_file}; "
-                           "deliberate keepers via [stray-files] allow in .housekeeping.toml")
+        return failed(
+            "; ".join(problems),
+            note=f"notes go in {notes_dir}/, todos in {todo_file}; "
+            "deliberate keepers via [stray-files] allow in .housekeeping.toml",
+        )
     return passed("no stray .md/.txt at the repo root")

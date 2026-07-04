@@ -30,7 +30,9 @@ STYLE = {
 def resolve_repo(arg: str | None) -> str:
     repo = arg or repo_from_cwd()
     if not repo:
-        console.print("[red]not inside a GitHub checkout — pass owner/repo explicitly[/red]")
+        console.print(
+            "[red]not inside a GitHub checkout — pass owner/repo explicitly[/red]"
+        )
         sys.exit(2)
     return repo
 
@@ -41,8 +43,10 @@ def select_checks(only: str | None) -> list:
     names = [n.strip() for n in only.split(",")]
     unknown = [n for n in names if n not in CHECKS]
     if unknown:
-        console.print(f"[red]unknown checks: {', '.join(unknown)}[/red] "
-                      f"(available: {', '.join(CHECKS)})")
+        console.print(
+            f"[red]unknown checks: {', '.join(unknown)}[/red] "
+            f"(available: {', '.join(CHECKS)})"
+        )
         sys.exit(2)
     return [CHECKS[n] for n in names]
 
@@ -62,14 +66,16 @@ def audit(repo: str, only: str | None = None) -> dict:
     rows.extend(fleet_lock_rows(ctx))
     unknown = ctx.config.unknown_keys(set(CHECKS))
     if unknown:
-        rows.append({
-            "check": "config",
-            "status": Status.FAIL.value,
-            "severity": "required",
-            "details": f"unknown keys in .housekeeping.toml: {', '.join(unknown)}",
-            "note": "a typo, or config from a newer housekeeping — nothing reads these",
-            "fixable": False,
-        })
+        rows.append(
+            {
+                "check": "config",
+                "status": Status.FAIL.value,
+                "severity": "required",
+                "details": f"unknown keys in .housekeeping.toml: {', '.join(unknown)}",
+                "note": "a typo, or config from a newer housekeeping — nothing reads these",
+                "fixable": False,
+            }
+        )
     for check in selected:
         severity = ctx.config.severity(check.name, visibility)
         if severity == "off":
@@ -78,14 +84,16 @@ def audit(repo: str, only: str | None = None) -> dict:
             result = check.run(ctx)
         except Exception as e:  # a broken check shouldn't sink the run
             result = Result(Status.ERROR, f"check crashed: {e}")
-        rows.append({
-            "check": check.name,
-            "status": result.status.value,
-            "severity": severity,
-            "details": result.details,
-            "note": result.note,
-            "fixable": check.fixable,
-        })
+        rows.append(
+            {
+                "check": check.name,
+                "status": result.status.value,
+                "severity": severity,
+                "details": result.details,
+                "note": result.note,
+                "fixable": check.fixable,
+            }
+        )
 
     payload = {
         "repo": repo,
@@ -111,7 +119,9 @@ def cmd_check(args) -> int:
         print(json.dumps(payload, indent=2))
     else:
         render(payload)
-        console.print(f"[dim]results saved to {RESULTS_DIR / (repo.replace('/', '--') + '.json')}[/dim]")
+        console.print(
+            f"[dim]results saved to {RESULTS_DIR / (repo.replace('/', '--') + '.json')}[/dim]"
+        )
 
     # Inside GitHub Actions, also render into the job summary.
     summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
@@ -125,11 +135,15 @@ def cmd_check(args) -> int:
 def cmd_fix(args) -> int:
     repo = resolve_repo(args.repo)
     if args.check not in CHECKS:
-        console.print(f"[red]unknown check {args.check!r}[/red] (available: {', '.join(CHECKS)})")
+        console.print(
+            f"[red]unknown check {args.check!r}[/red] (available: {', '.join(CHECKS)})"
+        )
         return 2
     check = CHECKS[args.check]
     if check.fix is None:
-        console.print(f"[yellow]{check.name} has no automated fix[/yellow] — see the check details for what to do")
+        console.print(
+            f"[yellow]{check.name} has no automated fix[/yellow] — see the check details for what to do"
+        )
         return 2
 
     ctx = RepoContext(repo)
@@ -140,7 +154,9 @@ def cmd_fix(args) -> int:
         console.print(f"[green]{check.name} already passes[/green] — nothing to fix")
         return 0
     if result.status == Status.SKIP:
-        console.print(f"[dim]{check.name} is skipped for this repo:[/dim] {result.details}")
+        console.print(
+            f"[dim]{check.name} is skipped for this repo:[/dim] {result.details}"
+        )
         return 0
 
     console.print(f"[red]{check.name}[/red]: {result.details}")
@@ -155,14 +171,20 @@ def load_manifest_or_exit(path_arg: str | None):
 
     path = Path(path_arg or "housecaptain.toml")
     if not path.is_file():
-        console.print(f"[red]no manifest at {path}[/red] — pass a housecaptain.toml path")
+        console.print(
+            f"[red]no manifest at {path}[/red] — pass a housecaptain.toml path"
+        )
         sys.exit(2)
     return load_manifest(path)
 
 
-CAPTAIN_STYLE = {"ok": ("✓", "green"), "fail": ("✗", "red"),
-                 "conflict": ("≠", "yellow"), "error": ("!", "yellow"),
-                 "parked": ("–", "dim")}
+CAPTAIN_STYLE = {
+    "ok": ("✓", "green"),
+    "fail": ("✗", "red"),
+    "conflict": ("≠", "yellow"),
+    "error": ("!", "yellow"),
+    "parked": ("–", "dim"),
+}
 
 
 def cmd_captain(args) -> int:
@@ -171,23 +193,34 @@ def cmd_captain(args) -> int:
     manifest = load_manifest_or_exit(args.manifest)
     bad_policy = bool(manifest.unknown_policy)
     if bad_policy:
-        console.print(f"[red]unknown policy keys in the manifest: "
-                      f"{', '.join(manifest.unknown_policy)}[/red] — a typo, or policy "
-                      "from a newer housekeeping than this captain; fix one of the two")
+        console.print(
+            f"[red]unknown policy keys in the manifest: "
+            f"{', '.join(manifest.unknown_policy)}[/red] — a typo, or policy "
+            "from a newer housekeeping than this captain; fix one of the two"
+        )
 
     reports = []
     contexts: dict[str, RepoContext] = {}
     for member in manifest.members:
         if member.parked:
-            reports.append(MemberReport(member.repo, "parked",
-                                        "in the fleet, not yet expected to self-audit",
-                                        note=member.note))
+            reports.append(
+                MemberReport(
+                    member.repo,
+                    "parked",
+                    "in the fleet, not yet expected to self-audit",
+                    note=member.note,
+                )
+            )
             continue
         contexts[member.repo] = ctx = RepoContext(member.repo)
         try:
-            report = captain_member(ctx, manifest.policy_checks,
-                                    manifest.required_files,
-                                    manifest.locked, manifest.captain)
+            report = captain_member(
+                ctx,
+                manifest.policy_checks,
+                manifest.required_files,
+                manifest.locked,
+                manifest.captain,
+            )
         except GhError as e:
             report = MemberReport(member.repo, "error", f"api error: {e}")
         if member.note and not report.note:
@@ -199,12 +232,20 @@ def cmd_captain(args) -> int:
     table.add_column("status")
     table.add_column("details", overflow="fold")
     table.add_column("note", style="dim", overflow="fold")
-    lines = [f"### {manifest.name} fleet", "", "| member | status | details | note |",
-             "|---|---|---|---|"]
+    lines = [
+        f"### {manifest.name} fleet",
+        "",
+        "| member | status | details | note |",
+        "|---|---|---|---|",
+    ]
     for report in reports:
         symbol, style = CAPTAIN_STYLE[report.status]
-        table.add_row(report.repo, f"[{style}]{symbol} {report.status}[/{style}]",
-                      report.details, report.note)
+        table.add_row(
+            report.repo,
+            f"[{style}]{symbol} {report.status}[/{style}]",
+            report.details,
+            report.note,
+        )
         cells = [report.repo, f"{symbol} {report.status}", report.details, report.note]
         lines.append("| " + " | ".join(c.replace("|", "\\|") for c in cells) + " |")
     console.print(table)
@@ -251,8 +292,13 @@ def cmd_fleet(args) -> int:
         failing = [r for r in rows if r["status"] in ("fail", "error")]
         warns = [r for r in failing if r["severity"] == "recommended"]
         hard = [r for r in failing if r["severity"] == "required"]
-        table.add_row(member.repo, str(passed), str(len(warns)), str(len(hard)),
-                      ", ".join(r["check"] for r in hard) or "-")
+        table.add_row(
+            member.repo,
+            str(passed),
+            str(len(warns)),
+            str(len(hard)),
+            ", ".join(r["check"] for r in hard) or "-",
+        )
         if hard:
             worst = 1
     console.print(table)
@@ -264,7 +310,9 @@ def cmd_report(args) -> int:
     repo = resolve_repo(args.repo)
     results_path = RESULTS_DIR / f"{repo.replace('/', '--')}.json"
     if not results_path.is_file():
-        console.print(f"[red]no saved results for {repo}[/red] — run `housekeeper check` first")
+        console.print(
+            f"[red]no saved results for {repo}[/red] — run `housekeeper check` first"
+        )
         return 2
     payload = json.loads(results_path.read_text())
     render(payload)
@@ -272,7 +320,9 @@ def cmd_report(args) -> int:
 
 
 def render(payload: dict) -> None:
-    table = Table(title=f"{payload['repo']} ({payload['visibility']}) — {payload['checked_at']}")
+    table = Table(
+        title=f"{payload['repo']} ({payload['visibility']}) — {payload['checked_at']}"
+    )
     table.add_column("check")
     table.add_column("status")
     table.add_column("details", overflow="fold")
@@ -313,36 +363,52 @@ def render_markdown(payload: dict) -> str:
 
 
 def exit_code(payload: dict) -> int:
-    bad = [r for r in payload["results"]
-           if r["status"] in ("fail", "error") and r["severity"] == "required"]
+    bad = [
+        r
+        for r in payload["results"]
+        if r["status"] in ("fail", "error") and r["severity"] == "required"
+    ]
     return 1 if bad else 0
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(prog="housekeeper",
-                                     description="Check that a GitHub repo is in good order.")
+    parser = argparse.ArgumentParser(
+        prog="housekeeper", description="Check that a GitHub repo is in good order."
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
     p_check = sub.add_parser("check", help="run checks (read-only)")
-    p_check.add_argument("repo", nargs="?", help="owner/repo (default: inferred from cwd)")
+    p_check.add_argument(
+        "repo", nargs="?", help="owner/repo (default: inferred from cwd)"
+    )
     p_check.add_argument("--only", help="comma-separated check names")
     p_check.add_argument("--json", action="store_true", help="print results as JSON")
     p_check.set_defaults(func=cmd_check)
 
-    p_fix = sub.add_parser("fix", help="fix one failing check (asks before changing anything)")
+    p_fix = sub.add_parser(
+        "fix", help="fix one failing check (asks before changing anything)"
+    )
     p_fix.add_argument("check", help="check name to fix")
-    p_fix.add_argument("repo", nargs="?", help="owner/repo (default: inferred from cwd)")
+    p_fix.add_argument(
+        "repo", nargs="?", help="owner/repo (default: inferred from cwd)"
+    )
     p_fix.set_defaults(func=cmd_fix)
 
     p_report = sub.add_parser("report", help="re-render the last check run")
-    p_report.add_argument("repo", nargs="?", help="owner/repo (default: inferred from cwd)")
+    p_report.add_argument(
+        "repo", nargs="?", help="owner/repo (default: inferred from cwd)"
+    )
     p_report.set_defaults(func=cmd_report)
 
     p_captain = sub.add_parser(
-        "captain", help="check every fleet member is auditing itself (API-only)")
+        "captain", help="check every fleet member is auditing itself (API-only)"
+    )
     p_captain.add_argument("manifest", nargs="?", help="path to housecaptain.toml")
-    p_captain.add_argument("--dispatch", action="store_true",
-                           help="also trigger every member's self-audit now")
+    p_captain.add_argument(
+        "--dispatch",
+        action="store_true",
+        help="also trigger every member's self-audit now",
+    )
     p_captain.set_defaults(func=cmd_captain)
 
     p_fleet = sub.add_parser("fleet", help="full local audit of every fleet member")

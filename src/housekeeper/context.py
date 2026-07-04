@@ -30,8 +30,12 @@ class Ecosystem:
     dependabot_alts: tuple[str, ...] = ()  # also acceptable in dependabot.yml
 
 
-def run(cmd: list[str], cwd: Path | None = None, input_data: str | None = None) -> subprocess.CompletedProcess:
-    return subprocess.run(cmd, cwd=cwd, input=input_data, capture_output=True, text=True)
+def run(
+    cmd: list[str], cwd: Path | None = None, input_data: str | None = None
+) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        cmd, cwd=cwd, input=input_data, capture_output=True, text=True
+    )
 
 
 class RepoContext:
@@ -42,7 +46,13 @@ class RepoContext:
 
     # ---- GitHub API (via gh, which already holds auth) ----
 
-    def api(self, path: str, method: str = "GET", input: dict | None = None, params: dict | None = None) -> Any:
+    def api(
+        self,
+        path: str,
+        method: str = "GET",
+        input: dict | None = None,
+        params: dict | None = None,
+    ) -> Any:
         args = ["api", path]
         # gh flips to POST when -f/-F fields are present unless the method is
         # forced — always force it so a GET with params can never mutate.
@@ -88,7 +98,9 @@ class RepoContext:
     @property
     def workdir(self) -> Path:
         if self._workdir is None:
-            raise RuntimeError("check declared needs=('clone',) but no workdir was prepared")
+            raise RuntimeError(
+                "check declared needs=('clone',) but no workdir was prepared"
+            )
         return self._workdir
 
     @property
@@ -104,14 +116,20 @@ class RepoContext:
             return local
         dest = CACHE_DIR / self.repo
         if (dest / ".git").exists():
-            fetch = run(["git", "fetch", "--depth=1", "origin", self.default_branch], cwd=dest)
+            fetch = run(
+                ["git", "fetch", "--depth=1", "origin", self.default_branch], cwd=dest
+            )
             if fetch.returncode == 0:
                 run(["git", "reset", "--hard", "FETCH_HEAD"], cwd=dest)
         else:
             dest.parent.mkdir(parents=True, exist_ok=True)
-            proc = run(["gh", "repo", "clone", self.repo, str(dest), "--", "--depth", "1"])
+            proc = run(
+                ["gh", "repo", "clone", self.repo, str(dest), "--", "--depth", "1"]
+            )
             if proc.returncode != 0:
-                raise RuntimeError(f"clone of {self.repo} failed: {proc.stderr.strip()}")
+                raise RuntimeError(
+                    f"clone of {self.repo} failed: {proc.stderr.strip()}"
+                )
         self._workdir = dest
         return dest
 
@@ -158,12 +176,17 @@ def detect_ecosystems(workdir: Path) -> list[Ecosystem]:
     elif (workdir / "requirements.txt").is_file():
         found.append(Ecosystem("pip", "requirements.txt", None, "pip"))
 
+    if (workdir / "Gemfile").is_file():
+        found.append(Ecosystem("ruby", "Gemfile", "Gemfile.lock", "bundler"))
+
     if (workdir / "go.mod").is_file():
         found.append(Ecosystem("go", "go.mod", "go.sum", "gomod"))
 
     workflows = workdir / ".github" / "workflows"
     if workflows.is_dir() and any(workflows.glob("*.y*ml")):
-        found.append(Ecosystem("github-actions", ".github/workflows", None, "github-actions"))
+        found.append(
+            Ecosystem("github-actions", ".github/workflows", None, "github-actions")
+        )
 
     return found
 

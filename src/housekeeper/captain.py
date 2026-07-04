@@ -42,7 +42,9 @@ def is_housekeeping_workflow(repo: str, text: str) -> bool:
 class Member:
     repo: str
     note: str = ""
-    parked: bool = False  # listed but not yet expected to self-audit; never fails the captain
+    parked: bool = (
+        False  # listed but not yet expected to self-audit; never fails the captain
+    )
 
 
 @dataclass
@@ -64,22 +66,31 @@ class Manifest:
 
 def load_manifest(path: Path) -> Manifest:
     data = tomllib.loads(path.read_text())
-    members = [Member(repo=m["repo"], note=m.get("note", ""),
-                      parked=bool(m.get("parked", False)))
-               for m in data.get("member", [])]
+    members = [
+        Member(
+            repo=m["repo"], note=m.get("note", ""), parked=bool(m.get("parked", False))
+        )
+        for m in data.get("member", [])
+    ]
     if not members:
         raise ValueError(f"{path}: no [[member]] entries")
     policy = data.get("policy", {})
-    required = [RequiredFile(path=f["path"], scope=f.get("scope", "all"))
-                for f in policy.get("required-file", [])]
+    required = [
+        RequiredFile(path=f["path"], scope=f.get("scope", "all"))
+        for f in policy.get("required-file", [])
+    ]
     for rf in required:
         if rf.scope not in ("all", "public", "private"):
-            raise ValueError(f"{path}: required-file scope {rf.scope!r} "
-                             "must be all, public, or private")
+            raise ValueError(
+                f"{path}: required-file scope {rf.scope!r} "
+                "must be all, public, or private"
+            )
     locked = list(policy.get("locked", []))
     if locked and not data.get("captain"):
-        raise ValueError(f"{path}: [policy] locked requires a top-level "
-                         'captain = "owner/repo" so members can declare their fleet')
+        raise ValueError(
+            f"{path}: [policy] locked requires a top-level "
+            'captain = "owner/repo" so members can declare their fleet'
+        )
     return Manifest(
         name=data.get("name", path.stem),
         members=members,
@@ -124,7 +135,10 @@ def find_housekeeping_workflow(ctx: RepoContext) -> tuple[str, set[str]] | None:
     """Return (workflow path, triggers) of the member's housekeeping workflow."""
     listing = ctx.try_api(f"repos/{ctx.repo}/contents/.github/workflows") or []
     for entry in listing:
-        if not (isinstance(entry, dict) and entry.get("name", "").endswith((".yml", ".yaml"))):
+        if not (
+            isinstance(entry, dict)
+            and entry.get("name", "").endswith((".yml", ".yaml"))
+        ):
             continue
         text = _file_text(ctx, entry["path"])
         if not text or not is_housekeeping_workflow(ctx.repo, text):
@@ -143,9 +157,10 @@ def latest_run_conclusion(ctx: RepoContext, workflow_path: str) -> tuple[str, st
     match = next((w for w in workflows if w.get("path") == workflow_path), None)
     if match is None:
         return "no-runs", ""
-    runs = ctx.api(f"repos/{ctx.repo}/actions/workflows/{match['id']}/runs",
-                   params={"branch": ctx.default_branch, "status": "completed",
-                           "per_page": 1})
+    runs = ctx.api(
+        f"repos/{ctx.repo}/actions/workflows/{match['id']}/runs",
+        params={"branch": ctx.default_branch, "status": "completed", "per_page": 1},
+    )
     latest = (runs.get("workflow_runs") or [None])[0]
     if latest is None:
         return "no-runs", ""
@@ -162,9 +177,13 @@ def member_config(ctx: RepoContext) -> dict | None:
     except tomllib.TOMLDecodeError:
         return {}
 
-def policy_conflicts(ctx: RepoContext, policy: dict[str, str],
-                     locked: list[str] | None = None,
-                     captain_repo: str = "") -> list[str]:
+
+def policy_conflicts(
+    ctx: RepoContext,
+    policy: dict[str, str],
+    locked: list[str] | None = None,
+    captain_repo: str = "",
+) -> list[str]:
     """Fleet policy vs the member's own .housekeeping.toml. Same value or
     member silence is fine; a differing value is a conflict to surface.
     Locked keys are stricter: setting one at all is a conflict, and when
@@ -180,24 +199,34 @@ def policy_conflicts(ctx: RepoContext, policy: dict[str, str],
             if check in member_checks and member_checks[check] != value
         ]
     if locked:
-        conflicts += [f"{key} is locked by fleet policy but set locally"
-                      for key in lock_violations(config or {}, locked)]
+        conflicts += [
+            f"{key} is locked by fleet policy but set locally"
+            for key in lock_violations(config or {}, locked)
+        ]
         declared = (config or {}).get("fleet", "")
         if declared != captain_repo:
-            conflicts.append(f'member must declare fleet = "{captain_repo}" in '
-                             ".housekeeping.toml — without it, locks aren't "
-                             "enforced on the member's own PRs")
+            conflicts.append(
+                f'member must declare fleet = "{captain_repo}" in '
+                ".housekeeping.toml — without it, locks aren't "
+                "enforced on the member's own PRs"
+            )
     return conflicts
 
 
-def captain_member(ctx: RepoContext, policy: dict[str, str],
-                   required_files: list[RequiredFile] | None = None,
-                   locked: list[str] | None = None,
-                   captain_repo: str = "") -> MemberReport:
+def captain_member(
+    ctx: RepoContext,
+    policy: dict[str, str],
+    required_files: list[RequiredFile] | None = None,
+    locked: list[str] | None = None,
+    captain_repo: str = "",
+) -> MemberReport:
     found = find_housekeeping_workflow(ctx)
     if found is None:
-        return MemberReport(ctx.repo, "fail",
-                            "no housekeeping workflow — this repo isn't auditing itself")
+        return MemberReport(
+            ctx.repo,
+            "fail",
+            "no housekeeping workflow — this repo isn't auditing itself",
+        )
     workflow_path, trigger_set = found
 
     problems = []
@@ -209,8 +238,9 @@ def captain_member(ctx: RepoContext, policy: dict[str, str],
         if required.scope != "all" and ctx.visibility != required.scope:
             continue
         if ctx.try_api(f"repos/{ctx.repo}/contents/{required.path}") is None:
-            problems.append(f"missing {required.path} "
-                            f"(fleet policy for {required.scope} repos)")
+            problems.append(
+                f"missing {required.path} (fleet policy for {required.scope} repos)"
+            )
 
     conclusion, url = latest_run_conclusion(ctx, workflow_path)
     if conclusion == "no-runs":
@@ -220,17 +250,25 @@ def captain_member(ctx: RepoContext, policy: dict[str, str],
 
     conflicts = policy_conflicts(ctx, policy, locked, captain_repo)
     if conflicts:
-        return MemberReport(ctx.repo, "conflict",
-                            "; ".join(conflicts),
-                            note="; ".join(problems) if problems else
-                            "reconcile the member's .housekeeping.toml with fleet policy",
-                            workflow_path=workflow_path)
+        return MemberReport(
+            ctx.repo,
+            "conflict",
+            "; ".join(conflicts),
+            note="; ".join(problems)
+            if problems
+            else "reconcile the member's .housekeeping.toml with fleet policy",
+            workflow_path=workflow_path,
+        )
     if problems:
-        return MemberReport(ctx.repo, "fail", "; ".join(problems),
-                            workflow_path=workflow_path)
-    return MemberReport(ctx.repo, "ok",
-                        f"self-auditing via {workflow_path}, latest run green",
-                        workflow_path=workflow_path)
+        return MemberReport(
+            ctx.repo, "fail", "; ".join(problems), workflow_path=workflow_path
+        )
+    return MemberReport(
+        ctx.repo,
+        "ok",
+        f"self-auditing via {workflow_path}, latest run green",
+        workflow_path=workflow_path,
+    )
 
 
 def fleet_lock_rows(ctx: RepoContext) -> list[dict]:
@@ -248,24 +286,36 @@ def fleet_lock_rows(ctx: RepoContext) -> list[dict]:
         return []
 
     def config_row(details: str, note: str = "") -> dict:
-        return {"check": "config", "status": "fail", "severity": "required",
-                "details": details, "note": note, "fixable": False}
+        return {
+            "check": "config",
+            "status": "fail",
+            "severity": "required",
+            "details": details,
+            "note": note,
+            "fixable": False,
+        }
 
     try:
         text = _file_text(RepoContext(fleet), "housecaptain.toml")
     except GhError as e:
         return [config_row(f"declared fleet {fleet} is unreachable: {e}")]
     if text is None:
-        return [config_row(f'fleet = "{fleet}" declared but no housecaptain.toml there')]
+        return [
+            config_row(f'fleet = "{fleet}" declared but no housecaptain.toml there')
+        ]
     try:
         policy = tomllib.loads(text).get("policy", {})
     except tomllib.TOMLDecodeError:
         return [config_row(f"housecaptain.toml at {fleet} does not parse")]
 
     locked = list(policy.get("locked", []))
-    rows = [config_row(f"{key} is locked by fleet {fleet} — remove the local override",
-                       note="fleet law beats local config for locked keys")
-            for key in lock_violations(ctx.config.raw, locked)]
+    rows = [
+        config_row(
+            f"{key} is locked by fleet {fleet} — remove the local override",
+            note="fleet law beats local config for locked keys",
+        )
+        for key in lock_violations(ctx.config.raw, locked)
+    ]
     ctx.config.apply_locked(locked, policy.get("checks", {}))
     return rows
 
@@ -280,8 +330,11 @@ def dispatch_self_audit(ctx: RepoContext, workflow_path: str) -> str:
     if match is None:
         return "workflow not found"
     try:
-        ctx.api(f"repos/{ctx.repo}/actions/workflows/{match['id']}/dispatches",
-                method="POST", input={"ref": ctx.default_branch})
+        ctx.api(
+            f"repos/{ctx.repo}/actions/workflows/{match['id']}/dispatches",
+            method="POST",
+            input={"ref": ctx.default_branch},
+        )
     except GhError as e:
         if e.status == 422:
             return "not dispatchable — workflow lacks the workflow_dispatch trigger"

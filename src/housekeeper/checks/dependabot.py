@@ -24,8 +24,11 @@ def covered_ecosystems(path: Path) -> set[str]:
         data = yaml.safe_load(path.read_text()) or {}
     except yaml.YAMLError:
         return set()
-    return {u.get("package-ecosystem", "") for u in data.get("updates", [])
-            if isinstance(u, dict)}
+    return {
+        u.get("package-ecosystem", "")
+        for u in data.get("updates", [])
+        if isinstance(u, dict)
+    }
 
 
 def uncovered(ctx: RepoContext, covered: set[str]) -> list[str]:
@@ -73,12 +76,21 @@ def dependabot(ctx: RepoContext):
         elif state is None:
             unknown.append(label)
 
-    note = (f"not visible to this token: {', '.join(unknown)} — "
-            "run housekeeper locally for full coverage") if unknown else ""
+    note = (
+        (
+            f"not visible to this token: {', '.join(unknown)} — "
+            "run housekeeper locally for full coverage"
+        )
+        if unknown
+        else ""
+    )
     if problems:
         return failed("; ".join(problems), note)
-    return passed("dependabot.yml covers all ecosystems"
-                  + ("" if unknown else "; alerts + security fixes on"), note)
+    return passed(
+        "dependabot.yml covers all ecosystems"
+        + ("" if unknown else "; alerts + security fixes on"),
+        note,
+    )
 
 
 UPDATE_TEMPLATE = """\
@@ -117,8 +129,11 @@ def fix(ctx: RepoContext):
     missing = uncovered(ctx, covered)
     if not missing:
         return
-    to_add = [eco.dependabot for eco in ctx.ecosystems
-              if not ({eco.dependabot, *eco.dependabot_alts} & covered)]
+    to_add = [
+        eco.dependabot
+        for eco in ctx.ecosystems
+        if not ({eco.dependabot, *eco.dependabot_alts} & covered)
+    ]
 
     def write(workdir: Path) -> list[Path]:
         target = dependabot_path(workdir) or workdir / ".github" / "dependabot.yml"
@@ -132,10 +147,11 @@ def fix(ctx: RepoContext):
         return [target]
 
     apply_file_fix(
-        ctx, "dependabot",
+        ctx,
+        "dependabot",
         describe=f"add weekly dependabot updates for: {', '.join(to_add)}",
         why="weekly update PRs keep dependencies moving in small, reviewable bumps — "
-            "the alternative is one scary mass upgrade a year later",
+        "the alternative is one scary mass upgrade a year later",
         write_changes=write,
         commit_message="chore: cover all ecosystems in dependabot.yml",
     )

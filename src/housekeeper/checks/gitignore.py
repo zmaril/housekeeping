@@ -58,10 +58,11 @@ def fix(ctx: RepoContext):
         return [path]
 
     apply_file_fix(
-        ctx, "gitignore",
+        ctx,
+        "gitignore",
         describe=f"add to .gitignore: {', '.join(missing)}",
         why="build junk that isn't ignored ends up committed sooner or later — "
-            "bloating the repo and burying real diffs",
+        "bloating the repo and burying real diffs",
         write_changes=write,
         commit_message="chore: cover build junk in .gitignore",
     )

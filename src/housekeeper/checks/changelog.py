@@ -42,10 +42,11 @@ def fix(ctx: RepoContext):
         return [target]
 
     apply_file_fix(
-        ctx, "changelog",
+        ctx,
+        "changelog",
         describe="add a CHANGELOG.md stub (newest-first, dated entries)",
         why="a changelog tells users what changed without making them read diffs — "
-            "and future-you is a user too",
+        "and future-you is a user too",
         write_changes=write,
         commit_message="docs: start a changelog",
     )

@@ -155,6 +155,10 @@ website = "off"                    # required | recommended | off
 
 [website]
 url = "https://straitjacket.dev"   # expected homepage
+
+[[codegen]]                        # committed generated code: CI must regen + zero-diff
+name = "ruby bindings"
+command = "make bindgen"
 ```
 
 Private repos automatically soften `website` and `license` to recommended,

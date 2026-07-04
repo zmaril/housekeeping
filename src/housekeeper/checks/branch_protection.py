@@ -15,16 +15,18 @@ WANTED = {
 
 def effective_rules(ctx: RepoContext) -> set[str] | None:
     """Rule types active on the default branch (rulesets, incl. org-level)."""
-    rules = ctx.try_api(f"repos/{ctx.repo}/rules/branches/{ctx.default_branch}",
-                        none_on=(403, 404))
+    rules = ctx.try_api(
+        f"repos/{ctx.repo}/rules/branches/{ctx.default_branch}", none_on=(403, 404)
+    )
     if rules is None:
         return None
     return {r["type"] for r in rules}
 
 
 def classic_rules(ctx: RepoContext) -> set[str] | None:
-    prot = ctx.try_api(f"repos/{ctx.repo}/branches/{ctx.default_branch}/protection",
-                       none_on=(403, 404))
+    prot = ctx.try_api(
+        f"repos/{ctx.repo}/branches/{ctx.default_branch}/protection", none_on=(403, 404)
+    )
     if prot is None:
         return None
     rules = set()
@@ -44,8 +46,10 @@ def branch_protection(ctx: RepoContext):
     rules = effective_rules(ctx)
     classic = classic_rules(ctx)
     if rules is None and classic is None and ctx.visibility == "private":
-        return skipped("branch protection not available",
-                       note="private repos need a paid plan for rulesets/protection")
+        return skipped(
+            "branch protection not available",
+            note="private repos need a paid plan for rulesets/protection",
+        )
     active = (rules or set()) | (classic or set())
 
     missing = [label for rule, label in WANTED.items() if rule not in active]
@@ -70,7 +74,9 @@ def fix(ctx: RepoContext):
         "published history can't be rewritten under people who pulled it, and the branch "
         "can't be deleted by a fat-fingered push.[/dim]"
     )
-    console.print("[dim]Required status checks are not set here — add them once CI exists and is green.[/dim]")
+    console.print(
+        "[dim]Required status checks are not set here — add them once CI exists and is green.[/dim]"
+    )
     if not confirm("Apply the ruleset?"):
         console.print("Nothing done.")
         return

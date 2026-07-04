@@ -32,7 +32,13 @@ def test_thin_readme_lists_all_problems(tmp_path):
     (tmp_path / "README.md").write_text("# thing\n\nit does stuff\n")
     result = readme(ctx_for(tmp_path))
     assert result.status == Status.FAIL
-    for problem in ("words", "install", "usage", "License section", "Contributing section"):
+    for problem in (
+        "words",
+        "install",
+        "usage",
+        "License section",
+        "Contributing section",
+    ):
         assert problem in result.details
 
 
@@ -48,7 +54,9 @@ def test_license_in_prose_does_not_count(tmp_path):
 
 
 def test_heading_word_families_count(tmp_path):
-    text = GOOD.replace("## Contributing\n\nIssues welcome.\n\n", "### Contributions\n\nsend them\n\n")
+    text = GOOD.replace(
+        "## Contributing\n\nIssues welcome.\n\n", "### Contributions\n\nsend them\n\n"
+    )
     text = text.replace("## License\n\nMIT\n\n", "# Licensing\n\nMIT\n\n")
     (tmp_path / "docs").mkdir()
     (tmp_path / "docs" / "guide.md").write_text("guide")

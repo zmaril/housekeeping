@@ -20,10 +20,12 @@ class ApiCtx:
 
 
 def security(scanning, push):
-    return {"security_and_analysis": {
-        "secret_scanning": {"status": scanning},
-        "secret_scanning_push_protection": {"status": push},
-    }}
+    return {
+        "security_and_analysis": {
+            "secret_scanning": {"status": scanning},
+            "secret_scanning_push_protection": {"status": push},
+        }
+    }
 
 
 def test_secret_scanning_pass():
@@ -44,12 +46,24 @@ def test_secret_scanning_private_without_ghas_skips():
 
 def test_workflow_permissions_pass_and_fail():
     path = "repos/o/r/actions/permissions/workflow"
-    good = ApiCtx(api_responses={path: {
-        "default_workflow_permissions": "read", "can_approve_pull_request_reviews": False}})
+    good = ApiCtx(
+        api_responses={
+            path: {
+                "default_workflow_permissions": "read",
+                "can_approve_pull_request_reviews": False,
+            }
+        }
+    )
     assert workflow_permissions(good).status == Status.PASS
 
-    bad = ApiCtx(api_responses={path: {
-        "default_workflow_permissions": "write", "can_approve_pull_request_reviews": True}})
+    bad = ApiCtx(
+        api_responses={
+            path: {
+                "default_workflow_permissions": "write",
+                "can_approve_pull_request_reviews": True,
+            }
+        }
+    )
     result = workflow_permissions(bad)
     assert result.status == Status.FAIL
     assert "read-write" in result.details and "approve" in result.details
@@ -79,6 +93,7 @@ def test_gitignore_covered_passes(tmp_path):
 
 
 def test_gitignore_no_known_junk_skips(tmp_path):
-    ctx = SimpleNamespace(workdir=tmp_path,
-                          ecosystems=[Ecosystem("go", "go.mod", "go.sum", "gomod")])
+    ctx = SimpleNamespace(
+        workdir=tmp_path, ecosystems=[Ecosystem("go", "go.mod", "go.sum", "gomod")]
+    )
     assert gitignore(ctx).status == Status.SKIP

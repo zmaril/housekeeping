@@ -46,7 +46,9 @@ def test_untyped_javascript_fails(tmp_path):
 
 def test_clojure_with_kondo_passes(tmp_path):
     (tmp_path / "deps.edn").write_text("{}")
-    write_workflow(tmp_path, "jobs:\n  t:\n    steps:\n      - run: clj-kondo --lint src\n")
+    write_workflow(
+        tmp_path, "jobs:\n  t:\n    steps:\n      - run: clj-kondo --lint src\n"
+    )
     assert typecheck(ctx_for(tmp_path)).status == Status.PASS
 
 
@@ -75,7 +77,8 @@ def test_tsc_in_workflow_passes(tmp_path):
 
 def test_tsc_hidden_in_package_script_passes(tmp_path):
     (tmp_path / "tsconfig.json").write_text("{}")
-    (tmp_path / "package.json").write_text(json.dumps(
-        {"scripts": {"check": "biome check src && tsc --noEmit"}}))
+    (tmp_path / "package.json").write_text(
+        json.dumps({"scripts": {"check": "biome check src && tsc --noEmit"}})
+    )
     write_workflow(tmp_path, WORKFLOW_VIA_SCRIPT)
     assert typecheck(ctx_for(tmp_path)).status == Status.PASS

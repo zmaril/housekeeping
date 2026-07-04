@@ -33,7 +33,9 @@ def fix(ctx: RepoContext):
         )
         description = console.input("Description (empty to skip): ").strip()
         if description and confirm(f"Set description to {description!r}?"):
-            ctx.api(f"repos/{ctx.repo}", method="PATCH", input={"description": description})
+            ctx.api(
+                f"repos/{ctx.repo}", method="PATCH", input={"description": description}
+            )
             console.print("[green]description set[/green]")
 
     if not info.get("topics"):

@@ -13,6 +13,8 @@ DEFAULT_SEVERITY = {
     "ci-exists": "required",
     "ci-green": "required",
     "typecheck": "required",
+    "builds": "required",
+    "codegen-drift": "required",
     "dependabot": "required",
     "secret-scanning": "required",
     "workflow-permissions": "required",
@@ -76,12 +78,25 @@ class Config:
         housekeeping. Surfaced, never silently ignored."""
         problems = []
         for section in self._repo:
-            if section not in ("checks", "fleet") and section not in known_checks:
+            if (
+                section not in ("checks", "fleet", "codegen")
+                and section not in known_checks
+            ):
                 problems.append(f"[{section}]")
         for check_name in self._repo.get("checks", {}):
             if check_name not in known_checks:
                 problems.append(f"checks.{check_name}")
         return sorted(problems)
+
+    @property
+    def codegen(self) -> list[dict[str, Any]]:
+        """Declared [[codegen]] regen commands, for the codegen-drift check."""
+        value = self._repo.get("codegen", [])
+        return (
+            [entry for entry in value if isinstance(entry, dict)]
+            if isinstance(value, list)
+            else []
+        )
 
     @property
     def fleet(self) -> str:

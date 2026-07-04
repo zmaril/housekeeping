@@ -42,12 +42,16 @@ def apply_file_fix(
 
     dirty = run(["git", "status", "--porcelain"], cwd=workdir)
     if dirty.stdout.strip():
-        console.print(f"[red]working tree at {workdir} is dirty — commit or stash first, then re-run[/red]")
+        console.print(
+            f"[red]working tree at {workdir} is dirty — commit or stash first, then re-run[/red]"
+        )
         return
 
     console.print(f"\nThis fix will: {describe}")
     console.print(f"[dim]Why: {why}[/dim]")
-    console.print(f"Changes go on a new branch [cyan]housekeeping/{check_name}[/cyan] in {workdir}.")
+    console.print(
+        f"Changes go on a new branch [cyan]housekeeping/{check_name}[/cyan] in {workdir}."
+    )
     if not confirm("Write the changes?"):
         console.print("Nothing done.")
         return
@@ -55,7 +59,9 @@ def apply_file_fix(
     branch = f"housekeeping/{check_name}"
     switched = run(["git", "switch", "-c", branch], cwd=workdir)
     if switched.returncode != 0:
-        console.print(f"[red]could not create branch {branch}:[/red] {switched.stderr.strip()}")
+        console.print(
+            f"[red]could not create branch {branch}:[/red] {switched.stderr.strip()}"
+        )
         return
 
     changed = write_changes(workdir)
@@ -66,8 +72,10 @@ def apply_file_fix(
     console.print(diff.stdout or "(no diff?)")
 
     if not confirm(f"Commit to {branch}?"):
-        console.print(f"Changes left staged on [cyan]{branch}[/cyan], uncommitted. "
-                      f"`git switch -` to go back.")
+        console.print(
+            f"Changes left staged on [cyan]{branch}[/cyan], uncommitted. "
+            f"`git switch -` to go back."
+        )
         return
     commit = run(["git", "commit", "-m", commit_message], cwd=workdir)
     if commit.returncode != 0:
@@ -76,15 +84,24 @@ def apply_file_fix(
     console.print(f"Committed to [cyan]{branch}[/cyan].")
 
     if not confirm("Push the branch and open a PR?"):
-        console.print(f"Not pushed. When ready: git push -u origin {branch} && gh pr create")
+        console.print(
+            f"Not pushed. When ready: git push -u origin {branch} && gh pr create"
+        )
         return
     push = run(["git", "push", "-u", "origin", branch], cwd=workdir)
     if push.returncode != 0:
         console.print(f"[red]push failed:[/red] {push.stderr.strip()}")
         return
     pr = run(
-        ["gh", "pr", "create", "--title", commit_message,
-         "--body", f"Automated housekeeping fix for the `{check_name}` check."],
+        [
+            "gh",
+            "pr",
+            "create",
+            "--title",
+            commit_message,
+            "--body",
+            f"Automated housekeeping fix for the `{check_name}` check.",
+        ],
         cwd=workdir,
     )
     if pr.returncode != 0:
