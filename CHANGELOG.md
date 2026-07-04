@@ -2,6 +2,23 @@
 
 Notable changes to housekeeping, newest first.
 
+## v1.10.0 — 2026-07-04
+
+- `ci-scheduled-run` check (recommended): CI should run on a schedule, not only on
+  push/PR. Push-only CI never exercises the repo between commits, so bitrot — an
+  expiring token, a moved dependency, a yanked pinned action — sits invisible until
+  the next contributor's PR trips over it. Passes when any workflow has a
+  `schedule:` trigger. Grounded in Dan Luu's *broken-builds* / *why-benchmark*.
+- `ci-job-timeout` check (recommended): push/PR CI jobs should set `timeout-minutes`.
+  GitHub's default is 6 hours, so a hung job burns runner minutes and shows a lying
+  "in progress" until the ceiling — and blocks the merge on a required check the
+  whole time. Reusable-workflow job calls (which can't set the key) are skipped.
+- `test-retry-masking` check (recommended): auto-rerunning tests until they pass
+  launders flakiness into a false green. Flags `pytest --reruns`, `jest --retries`,
+  Playwright/vitest/nextest nonzero retries in CI commands and the usual config
+  files. Retries have legitimate uses, so except it where deliberate. The mirror of
+  `ci-continue-on-error`; grounded in Dan Luu's *wat*.
+
 ## v1.9.0 — 2026-07-04
 
 - `ci-continue-on-error` check (required): a test/lint/build step must not be
