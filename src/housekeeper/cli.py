@@ -148,7 +148,8 @@ def load_manifest_or_exit(path_arg: str | None):
 
 
 CAPTAIN_STYLE = {"ok": ("✓", "green"), "fail": ("✗", "red"),
-                 "conflict": ("≠", "yellow"), "error": ("!", "yellow")}
+                 "conflict": ("≠", "yellow"), "error": ("!", "yellow"),
+                 "parked": ("–", "dim")}
 
 
 def cmd_captain(args) -> int:
@@ -157,6 +158,11 @@ def cmd_captain(args) -> int:
     manifest = load_manifest_or_exit(args.manifest)
     reports = []
     for member in manifest.members:
+        if member.parked:
+            reports.append(MemberReport(member.repo, "parked",
+                                        "in the fleet, not yet expected to self-audit",
+                                        note=member.note))
+            continue
         try:
             report = captain_member(RepoContext(member.repo), manifest.policy_checks)
         except GhError as e:

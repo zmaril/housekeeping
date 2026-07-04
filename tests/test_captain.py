@@ -15,6 +15,7 @@ repo = "zmaril/housekeeping"
 [[member]]
 repo = "zmaril/entl"
 note = "pre-release"
+parked = true
 
 [policy.checks]
 conventional-commits = "required"
@@ -75,6 +76,8 @@ def test_manifest_parses(tmp_path):
     assert manifest.name == "powderworks"
     assert [m.repo for m in manifest.members] == ["zmaril/housekeeping", "zmaril/entl"]
     assert manifest.members[1].note == "pre-release"
+    assert manifest.members[1].parked is True
+    assert manifest.members[0].parked is False
     assert manifest.policy_checks == {"conventional-commits": "required"}
 
 

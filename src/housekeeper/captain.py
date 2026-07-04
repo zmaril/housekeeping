@@ -37,6 +37,7 @@ def is_housekeeping_workflow(repo: str, text: str) -> bool:
 class Member:
     repo: str
     note: str = ""
+    parked: bool = False  # listed but not yet expected to self-audit; never fails the captain
 
 
 @dataclass
@@ -48,7 +49,8 @@ class Manifest:
 
 def load_manifest(path: Path) -> Manifest:
     data = tomllib.loads(path.read_text())
-    members = [Member(repo=m["repo"], note=m.get("note", ""))
+    members = [Member(repo=m["repo"], note=m.get("note", ""),
+                      parked=bool(m.get("parked", False)))
                for m in data.get("member", [])]
     if not members:
         raise ValueError(f"{path}: no [[member]] entries")
