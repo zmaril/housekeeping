@@ -64,6 +64,33 @@ skip with a note rather than guessing; pass `with: token:` a fine-grained
 PAT with read-only Administration scope for full coverage. Tune or disable
 checks with `.housekeeping.toml` in your repo root.
 
+### Fleet captain
+
+Repos audit themselves; the captain checks the auditors. A captain repo
+carries a `housecaptain.toml` naming the fleet:
+
+```toml
+name = "powderworks"
+
+[[member]]
+repo = "zmaril/housekeeping"
+
+[[member]]
+repo = "zmaril/entl"
+note = "pre-release, in flux"
+
+[policy.checks]
+conventional-commits = "required"
+```
+
+`housekeeper captain` (or the action with `captain: housecaptain.toml`) is
+the API-only delegation check: each member has a housekeeping workflow, it
+fires on pull_request + push + schedule, its latest default-branch run is
+green, and the member's `.housekeeping.toml` doesn't contradict fleet
+policy — divergence is surfaced as a conflict for a human to reconcile,
+never silently resolved. `housekeeper fleet` is the deep version: the full
+audit against every member from your machine, with a scoreboard.
+
 ### Agent skill
 
 The `tidy-up` skill audits the repo you're in, drives fixes, and does a
