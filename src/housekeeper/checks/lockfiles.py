@@ -41,12 +41,15 @@ def lockfiles(ctx: RepoContext):
 
     problems, unverified, ok = [], [], []
     for eco in relevant:
-        lock = ctx.workdir / eco.lockfile
-        if not lock.is_file():
-            problems.append(f"{eco.name}: {eco.lockfile} missing")
+        lockfile = eco.lockfile
+        if lockfile is None:  # relevant is pre-filtered; this narrows the type
             continue
-        if not tracked(ctx.workdir, eco.lockfile):
-            problems.append(f"{eco.name}: {eco.lockfile} exists but is not committed")
+        lock = ctx.workdir / lockfile
+        if not lock.is_file():
+            problems.append(f"{eco.name}: {lockfile} missing")
+            continue
+        if not tracked(ctx.workdir, lockfile):
+            problems.append(f"{eco.name}: {lockfile} exists but is not committed")
             continue
         tool = TOOL.get(eco.name)
         command = COMMANDS.get(eco.name)
@@ -85,11 +88,14 @@ def fix(ctx: RepoContext):
     def write(workdir: Path) -> list[Path]:
         changed = []
         for eco in stale:
+            lockfile = eco.lockfile
+            if lockfile is None:
+                continue
             proc = run(COMMANDS[eco.name][1], cwd=workdir)
             if proc.returncode != 0:
                 console.print(f"[red]{eco.name} regen failed:[/red] {proc.stderr.strip()[:500]}")
                 continue
-            changed.append(workdir / eco.lockfile)
+            changed.append(workdir / lockfile)
         return changed
 
     apply_file_fix(
