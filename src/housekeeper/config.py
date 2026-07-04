@@ -81,7 +81,7 @@ class Config:
         problems = []
         for section in self._repo:
             if (
-                section not in ("checks", "fleet", "codegen")
+                section not in ("checks", "fleet", "codegen", "logo")
                 and section not in known_checks
             ):
                 problems.append(f"[{section}]")
@@ -104,6 +104,13 @@ class Config:
     def fleet(self) -> str:
         """The captain repo this member belongs to, if declared."""
         value = self._repo.get("fleet", "")
+        return value if isinstance(value, str) else ""
+
+    @property
+    def logo(self) -> str:
+        """Optional repo logo for the fleet dashboard — an image URL, or a repo-relative
+        path (resolved to its raw URL when rendered)."""
+        value = self._repo.get("logo", "")
         return value if isinstance(value, str) else ""
 
     @property
