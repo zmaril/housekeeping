@@ -93,6 +93,15 @@ sets a locked key fails its own CI, so nobody excepts themselves in the same
 diff that adds the mess. Locking requires a top-level `captain = "owner/repo"`
 in the manifest; the captain flags members that don't declare their fleet.
 
+**Adoption note:** the PR that introduces locks to the manifest will have a
+red captain check, by construction. The captain reads member configs from
+their main branches — so members that haven't merged their `fleet = ...`
+lines yet show as conflicts, and the captain repo itself conflicts on the
+very PR that adds its own declaration (it can't bless its own enrollment).
+Merge order: member fleet-lines first, then the manifest PR — merged red on
+that one self-referential conflict — and the push-triggered captain run
+right after merge is the real verdict.
+
 `housekeeper captain` (or the action with `captain: housecaptain.toml`) is
 the API-only delegation check: each member has a housekeeping workflow, it
 fires on pull_request + push + schedule, its latest default-branch run is

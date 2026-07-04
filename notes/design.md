@@ -174,7 +174,11 @@ e.g. every open source member carries `notes/design.md`). Policy escalates
 from expectation to law via `[policy] locked`: members that declare their
 fleet enforce locked keys in their own audits at PR time (self-excepting
 diffs fail their own CI), and the captain backstops removal of the fleet
-declaration itself — the one escape in-repo enforcement can't close. `housekeeper fleet` is the deep local audit
+declaration itself — the one escape in-repo enforcement can't close.
+Known adoption wrinkle: the manifest PR that introduces locks fails its own
+captain check, since the captain reads member configs (including the captain
+repo's own) from main, not from the proposing PR — merge it red and trust
+the post-merge run. `housekeeper fleet` is the deep local audit
 over the same manifest. Captain-driven fixes deliberately don't exist;
 fixing stays one-repo and interactive.
 
