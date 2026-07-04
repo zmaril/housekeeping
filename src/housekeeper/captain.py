@@ -24,7 +24,7 @@ from .context import RepoContext
 from .checks.ci import triggers as workflow_triggers
 
 REQUIRED_TRIGGERS = {"pull_request", "push", "schedule", "workflow_dispatch"}
-KNOWN_POLICY = {"checks", "required-file"}
+KNOWN_POLICY = {"checks", "required-file", "locked"}
 
 
 def is_housekeeping_workflow(repo: str, text: str) -> bool:
@@ -58,6 +58,8 @@ class Manifest:
     policy_checks: dict[str, str] = field(default_factory=dict)
     required_files: list[RequiredFile] = field(default_factory=list)
     unknown_policy: list[str] = field(default_factory=list)
+    locked: list[str] = field(default_factory=list)  # dotted keys members may not set
+    captain: str = ""  # owner/repo of the captain itself; members declare fleet = this
 
 
 def load_manifest(path: Path) -> Manifest:
@@ -74,6 +76,10 @@ def load_manifest(path: Path) -> Manifest:
         if rf.scope not in ("all", "public", "private"):
             raise ValueError(f"{path}: required-file scope {rf.scope!r} "
                              "must be all, public, or private")
+    locked = list(policy.get("locked", []))
+    if locked and not data.get("captain"):
+        raise ValueError(f"{path}: [policy] locked requires a top-level "
+                         'captain = "owner/repo" so members can declare their fleet')
     return Manifest(
         name=data.get("name", path.stem),
         members=members,
@@ -82,7 +88,20 @@ def load_manifest(path: Path) -> Manifest:
         # Surfaced, never silently ignored: a typo'd policy section (or one
         # from a newer housekeeping) should be seen, not skipped.
         unknown_policy=sorted(set(policy) - KNOWN_POLICY),
+        locked=locked,
+        captain=data.get("captain", ""),
     )
+
+
+def lock_violations(member_config: dict, locked: list[str]) -> list[str]:
+    """Locked keys the member's .housekeeping.toml sets anyway."""
+    violations = []
+    for key in locked:
+        section, _, leaf = key.partition(".")
+        table = member_config.get(section, {})
+        if isinstance(table, dict) and leaf in table:
+            violations.append(key)
+    return violations
 
 
 @dataclass
@@ -133,27 +152,48 @@ def latest_run_conclusion(ctx: RepoContext, workflow_path: str) -> tuple[str, st
     return latest.get("conclusion") or "unknown", latest.get("html_url", "")
 
 
-def policy_conflicts(ctx: RepoContext, policy: dict[str, str]) -> list[str]:
-    """Fleet policy vs the member's own .housekeeping.toml. Same value or
-    member silence is fine; a differing value is a conflict to surface."""
-    if not policy:
-        return []
+def member_config(ctx: RepoContext) -> dict | None:
+    """The member's parsed .housekeeping.toml; None if absent, {} if unparseable."""
     text = _file_text(ctx, ".housekeeping.toml")
     if text is None:
-        return []
+        return None
     try:
-        member_checks = tomllib.loads(text).get("checks", {})
+        return tomllib.loads(text)
     except tomllib.TOMLDecodeError:
-        return [".housekeeping.toml does not parse"]
-    return [
-        f"{check}: member says {member_checks[check]!r}, fleet policy says {value!r}"
-        for check, value in sorted(policy.items())
-        if check in member_checks and member_checks[check] != value
-    ]
+        return {}
+
+def policy_conflicts(ctx: RepoContext, policy: dict[str, str],
+                     locked: list[str] | None = None,
+                     captain_repo: str = "") -> list[str]:
+    """Fleet policy vs the member's own .housekeeping.toml. Same value or
+    member silence is fine; a differing value is a conflict to surface.
+    Locked keys are stricter: setting one at all is a conflict, and when
+    locks exist the member must declare its fleet so its OWN audits enforce
+    them at PR time (the captain is only the backstop)."""
+    config = member_config(ctx)
+    conflicts = []
+    if config is not None:
+        member_checks = config.get("checks", {})
+        conflicts += [
+            f"{check}: member says {member_checks[check]!r}, fleet policy says {value!r}"
+            for check, value in sorted(policy.items())
+            if check in member_checks and member_checks[check] != value
+        ]
+    if locked:
+        conflicts += [f"{key} is locked by fleet policy but set locally"
+                      for key in lock_violations(config or {}, locked)]
+        declared = (config or {}).get("fleet", "")
+        if declared != captain_repo:
+            conflicts.append(f'member must declare fleet = "{captain_repo}" in '
+                             ".housekeeping.toml — without it, locks aren't "
+                             "enforced on the member's own PRs")
+    return conflicts
 
 
 def captain_member(ctx: RepoContext, policy: dict[str, str],
-                   required_files: list[RequiredFile] | None = None) -> MemberReport:
+                   required_files: list[RequiredFile] | None = None,
+                   locked: list[str] | None = None,
+                   captain_repo: str = "") -> MemberReport:
     found = find_housekeeping_workflow(ctx)
     if found is None:
         return MemberReport(ctx.repo, "fail",
@@ -178,7 +218,7 @@ def captain_member(ctx: RepoContext, policy: dict[str, str],
     elif conclusion != "success":
         problems.append(f"latest self-audit run: {conclusion} ({url})")
 
-    conflicts = policy_conflicts(ctx, policy)
+    conflicts = policy_conflicts(ctx, policy, locked, captain_repo)
     if conflicts:
         return MemberReport(ctx.repo, "conflict",
                             "; ".join(conflicts),
@@ -191,6 +231,43 @@ def captain_member(ctx: RepoContext, policy: dict[str, str],
     return MemberReport(ctx.repo, "ok",
                         f"self-auditing via {workflow_path}, latest run green",
                         workflow_path=workflow_path)
+
+
+def fleet_lock_rows(ctx: RepoContext) -> list[dict]:
+    """Member-side lock enforcement, run inside every audit.
+
+    A repo that declares `fleet = "owner/repo"` fetches that captain's
+    housecaptain.toml; locked keys set locally become required failures, and
+    locked check severities come from fleet policy — law, not expectation.
+    This is what makes a self-excepting PR (add stray file + allow it in the
+    same diff) fail its own CI in the act."""
+    from .context import GhError
+
+    fleet = ctx.config.fleet
+    if not fleet:
+        return []
+
+    def config_row(details: str, note: str = "") -> dict:
+        return {"check": "config", "status": "fail", "severity": "required",
+                "details": details, "note": note, "fixable": False}
+
+    try:
+        text = _file_text(RepoContext(fleet), "housecaptain.toml")
+    except GhError as e:
+        return [config_row(f"declared fleet {fleet} is unreachable: {e}")]
+    if text is None:
+        return [config_row(f'fleet = "{fleet}" declared but no housecaptain.toml there')]
+    try:
+        policy = tomllib.loads(text).get("policy", {})
+    except tomllib.TOMLDecodeError:
+        return [config_row(f"housecaptain.toml at {fleet} does not parse")]
+
+    locked = list(policy.get("locked", []))
+    rows = [config_row(f"{key} is locked by fleet {fleet} — remove the local override",
+                       note="fleet law beats local config for locked keys")
+            for key in lock_violations(ctx.config.raw, locked)]
+    ctx.config.apply_locked(locked, policy.get("checks", {}))
+    return rows
 
 
 def dispatch_self_audit(ctx: RepoContext, workflow_path: str) -> str:

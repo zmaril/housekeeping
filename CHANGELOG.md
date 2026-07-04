@@ -2,6 +2,16 @@
 
 Notable changes to housekeeping, newest first.
 
+## v1.5.0 — 2026-07-04
+
+- Policy locks: `[policy] locked = [...]` (plus a top-level `captain =
+  "owner/repo"`) in housecaptain.toml makes fleet policy law instead of
+  expectation for those keys. Members declare `fleet = "owner/repo"` in
+  .housekeeping.toml; their own audits then fetch the manifest, apply locked
+  severities, and fail any PR that sets a locked key — so an agent can't add
+  a stray file and except itself in the same diff. The captain backstops the
+  last escape (deleting the fleet line is a surfaced conflict).
+
 ## v1.4.0 — 2026-07-04
 
 - Captain dispatch: `housekeeper captain --dispatch` (action input
