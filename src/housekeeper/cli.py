@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from rich.console import Console
+from rich.markup import escape
 from rich.table import Table
 
 from . import checks  # noqa: F401 — importing registers every check
@@ -243,8 +244,8 @@ def cmd_captain(args) -> int:
         table.add_row(
             report.repo,
             f"[{style}]{symbol} {report.status}[/{style}]",
-            report.details,
-            report.note,
+            escape(report.details),
+            escape(report.note),
         )
         cells = [report.repo, f"{symbol} {report.status}", report.details, report.note]
         lines.append("| " + " | ".join(c.replace("|", "\\|") for c in cells) + " |")
@@ -332,10 +333,12 @@ def render(payload: dict) -> None:
         status = f"[{style}]{symbol} {row['status']}[/{style}]"
         if row["status"] == "fail" and row["severity"] == "recommended":
             status = "[yellow]! warn[/yellow]"
-        details = row["details"]
+        # escape() so literal brackets in check output ("[[codegen]]") aren't
+        # eaten as rich markup
+        details = escape(row["details"])
         if row["status"] == "fail" and row["fixable"]:
             details += f"  [cyan](housekeeper fix {row['check']})[/cyan]"
-        table.add_row(row["check"], status, details, row["note"])
+        table.add_row(row["check"], status, details, escape(row["note"]))
     console.print(table)
 
 
