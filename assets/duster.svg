@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" role="img" aria-label="feather duster">
+  <!-- handle -->
+  <rect x="11.1" y="11" width="1.8" height="11.4" rx="0.9" fill="#a9743c"/>
+  <!-- binding collar -->
+  <rect x="9.9" y="10.2" width="4.2" height="2.6" rx="1.1" fill="#caa15a"/>
+  <!-- feather plume: symmetric leaf shapes fanning up from the collar -->
+  <g>
+    <path d="M12 11 C9 8.4 9 3.2 12 1 C15 3.2 15 8.4 12 11 Z" fill="#4f9a94" transform="rotate(-42 12 11)"/>
+    <path d="M12 11 C9 8.4 9 3.2 12 1 C15 3.2 15 8.4 12 11 Z" fill="#68b3ab" transform="rotate(-21 12 11)"/>
+    <path d="M12 11 C9 8.4 9 3.2 12 1 C15 3.2 15 8.4 12 11 Z" fill="#7cc6bb"/>
+    <path d="M12 11 C9 8.4 9 3.2 12 1 C15 3.2 15 8.4 12 11 Z" fill="#68b3ab" transform="rotate(21 12 11)"/>
+    <path d="M12 11 C9 8.4 9 3.2 12 1 C15 3.2 15 8.4 12 11 Z" fill="#4f9a94" transform="rotate(42 12 11)"/>
+  </g>
+</svg>

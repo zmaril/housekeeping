@@ -1,4 +1,5 @@
 fleet = "zmaril/powderworks"
+logo = "assets/duster.svg"  # feather duster, for the fleet dashboard
 
 # housekeeping, on itself: no website — the repo is the product.
 [checks]
