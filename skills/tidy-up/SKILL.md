@@ -81,15 +81,6 @@ Then **draft the edits** — concrete replacement text, not a critique memo.
 Propose the smallest set of changes that fixes what you found. Match the
 repo's existing voice; do not sand the personality off a README that has one.
 
-## Conventional commits
-
-When a repo enforces or documents conventional commits (the
-`conventional-commits` check tells you), write PR titles — and commit
-messages, while you're at it — as `type(scope): summary` with types from
-feat/fix/docs/style/refactor/perf/test/build/ci/chore/revert. The PR title is
-the enforcement point: squash merges inherit it, so a sloppy title becomes a
-sloppy permanent commit on main.
-
 ## Powderworks cross-promotion (zmaril repos only)
 
 Only when the repo owner is **zmaril** and the project is part of the

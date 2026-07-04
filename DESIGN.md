@@ -134,7 +134,6 @@ non-skipped check failed.
 | `repo-meta` | API | Description set; ≥1 topic; issues enabled | Prompt for values, set via API |
 | `stale` | API | No PRs idle >30 days; no merged-but-undeleted branches; `delete_branch_on_merge` enabled | Enable the setting; delete merged branches (confirm each) |
 | `stray-files` | clone | No stray `.md`/`.txt` at the repo root beyond conventional community files; deliberate keepers via `[stray-files] allow` | none — needs judgment |
-| `conventional-commits` | clone + API | Enforced in CI (PR-title check or commitlint) and mentioned in README/CONTRIBUTING; recent default-branch adherence reported as a note, never judged retroactively | Set squash-title-from-PR-title; add the PR-title workflow |
 
 Ecosystem detection lives once in `context.py` (look for `Cargo.toml`,
 `package.json` + which lockfile, `pyproject.toml`, `go.mod`,

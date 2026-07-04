@@ -9,7 +9,6 @@ from . import (  # noqa: F401
     lockfiles,
     gitignore,
     stray_files,
-    conventional_commits,
     straitjacket,
     readme,
     action_badge,

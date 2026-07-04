@@ -18,7 +18,6 @@ DEFAULT_SEVERITY = {
     "lockfiles": "required",
     "gitignore": "recommended",
     "stray-files": "recommended",
-    "conventional-commits": "recommended",
     "straitjacket": "required",
     "readme": "required",
     "action-badge": "recommended",
