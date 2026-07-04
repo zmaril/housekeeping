@@ -3,6 +3,7 @@
 from . import (  # noqa: F401
     branch_protection,
     ci,
+    typecheck,
     dependabot,
     secret_scanning,
     workflow_permissions,

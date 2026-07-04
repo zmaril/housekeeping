@@ -12,6 +12,7 @@ DEFAULT_SEVERITY = {
     "branch-protection": "required",
     "ci-exists": "required",
     "ci-green": "required",
+    "typecheck": "required",
     "dependabot": "required",
     "secret-scanning": "required",
     "workflow-permissions": "required",

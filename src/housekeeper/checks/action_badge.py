@@ -53,7 +53,7 @@ def fix(ctx: RepoContext):
 
     action = action_file(ctx.workdir)
     slug = marketplace_slug(action) if action else None
-    if not slug:
+    if action is None or not slug:
         console.print("[yellow]could not derive a Marketplace slug from action.yml's name[/yellow]")
         return
     name = yaml.safe_load(action.read_text()).get("name")
@@ -62,8 +62,10 @@ def fix(ctx: RepoContext):
              f"(https://github.com/{MARKETPLACE.split('github.com/')[1]}{slug})")
 
     def write(workdir: Path) -> list[Path]:
-        readme = find_readme(workdir)
-        lines = readme.read_text(errors="replace").splitlines()
+        # The check fails (and this fix runs) even when there's no README at
+        # all — mypy caught the crash the original code had here.
+        readme = find_readme(workdir) or workdir / "README.md"
+        lines = readme.read_text(errors="replace").splitlines() if readme.is_file() else []
         for i, line in enumerate(lines):
             if line.lstrip().startswith("# "):
                 lines[i:i + 1] = [line, "", badge]

@@ -4,6 +4,14 @@ Notable changes to housekeeping, newest first.
 
 ## v1.2.0 — 2026-07-04
 
+- `typecheck` check (required): if the language supports typechecking, it
+  must run in CI — TypeScript (tsc and kin), Python (mypy/pyright/ty),
+  Clojure (clj-kondo/core.typed); untyped JavaScript fails with guidance to
+  add a type layer. Found live when 82 type errors had piled up invisibly in
+  a repo whose CI linted and tested but never typechecked. The TS fix adds a
+  typecheck workflow and preflights the current error count. Eating it
+  ourselves: housekeeping now runs mypy in CI, and mypy's first pass caught
+  a real crash path in the action-badge fix.
 - `conventional-commits` check (recommended; required on this repo): enforced
   in CI and documented, with recent-adherence as a note — history is never
   judged retroactively. The fix sets squash merges to title from the PR
