@@ -99,6 +99,7 @@ def audit(repo: str, only: str | None = None) -> dict:
     payload = {
         "repo": repo,
         "visibility": visibility,
+        "logo": ctx.config.logo,
         "checked_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "results": rows,
     }
@@ -304,6 +305,14 @@ def cmd_fleet(args) -> int:
             worst = 1
     console.print(table)
     console.print("[dim]per-repo detail: housekeeper report <owner/repo>[/dim]")
+
+    if getattr(args, "html", None):
+        from .dashboard import render_document
+
+        Path(args.html).write_text(
+            render_document(manifest.name, manifest.members, payloads)
+        )
+        console.print(f"[green]dashboard written to {args.html}[/green]")
     return worst
 
 
@@ -416,6 +425,9 @@ def main() -> None:
 
     p_fleet = sub.add_parser("fleet", help="full local audit of every fleet member")
     p_fleet.add_argument("manifest", nargs="?", help="path to housecaptain.toml")
+    p_fleet.add_argument(
+        "--html", metavar="FILE", help="also write an HTML check matrix dashboard"
+    )
     p_fleet.set_defaults(func=cmd_fleet)
 
     args = parser.parse_args()

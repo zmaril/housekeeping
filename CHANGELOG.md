@@ -2,6 +2,19 @@
 
 Notable changes to housekeeping, newest first.
 
+## v1.8.0 — 2026-07-04
+
+- Fleet check-matrix dashboard: `housekeeper fleet --html FILE` writes a
+  self-contained, theme-aware HTML page — a matrix of every fleet repo (rows)
+  against every check (columns), each cell coloured by outcome (pass / warn /
+  fail / skip / off) so the whole fleet's health reads at a glance. Recommended
+  failures render as a warn, required failures as a hard fail; unreachable
+  members collapse to a single "unreachable" row.
+- Repos can declare an optional `logo = "..."` in `.housekeeping.toml` (an image
+  URL or a repo-relative path, resolved to its raw URL) shown beside the repo
+  name in the dashboard. The key is allow-listed, so it isn't reported as unknown
+  config.
+
 ## v1.7.0 — 2026-07-04
 
 - `required-checks` check (required): the default branch must actually *require*
