@@ -3,7 +3,7 @@ from types import SimpleNamespace
 from housekeeper.checks.action_badge import action_badge, marketplace_slug
 from housekeeper.registry import Status
 
-ACTION = 'name: Powderworks Housekeeping\ndescription: x\nruns: {using: composite, steps: []}\n'
+ACTION = "name: Powderworks Housekeeping\ndescription: x\nruns: {using: composite, steps: []}\n"
 BADGE_LINK = "https://github.com/marketplace/actions/powderworks-housekeeping"
 
 

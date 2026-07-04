@@ -1,6 +1,5 @@
 """Behavior when running as a GitHub Action: limited tokens, self-hosted workflow."""
 
-
 from housekeeper.checks.ci import ci_green
 from housekeeper.checks.dependabot import dependabot
 from housekeeper.checks.secret_scanning import secret_scanning
@@ -45,8 +44,10 @@ def test_dependabot_unknown_settings_pass_with_note(tmp_path):
     )
     from housekeeper.context import Ecosystem
 
-    ctx = ForbiddenApiCtx(workdir=tmp_path,
-                          ecosystems=[Ecosystem("cargo", "Cargo.toml", "Cargo.lock", "cargo")])
+    ctx = ForbiddenApiCtx(
+        workdir=tmp_path,
+        ecosystems=[Ecosystem("cargo", "Cargo.toml", "Cargo.lock", "cargo")],
+    )
     result = dependabot(ctx)
     assert result.status == Status.PASS
     assert "not visible to this token" in result.note
@@ -65,11 +66,23 @@ def test_ci_green_excludes_the_hosting_workflow(monkeypatch):
     monkeypatch.setenv("GITHUB_WORKFLOW", "housekeeping")
     ctx = WorkflowsCtx(
         [
-            {"id": 1, "name": "ci", "path": ".github/workflows/ci.yml", "state": "active"},
-            {"id": 2, "name": "housekeeping", "path": ".github/workflows/housekeeping.yml",
-             "state": "active"},
+            {
+                "id": 1,
+                "name": "ci",
+                "path": ".github/workflows/ci.yml",
+                "state": "active",
+            },
+            {
+                "id": 2,
+                "name": "housekeeping",
+                "path": ".github/workflows/housekeeping.yml",
+                "state": "active",
+            },
         ],
-        {1: {"conclusion": "success"}, 2: {"conclusion": "failure"}},  # would deadlock itself
+        {
+            1: {"conclusion": "success"},
+            2: {"conclusion": "failure"},
+        },  # would deadlock itself
     )
     result = ci_green(ctx)
     assert result.status == Status.PASS
@@ -83,12 +96,24 @@ def test_ci_green_never_grades_family_workflows(monkeypatch):
 
     monkeypatch.delenv("GITHUB_WORKFLOW", raising=False)
     ctx = WorkflowsCtx(
-        [{"id": 2, "name": "housekeeping", "path": ".github/workflows/housekeeping.yml",
-          "state": "active"},
-         {"id": 3, "name": "housecaptain", "path": ".github/workflows/housecaptain.yml",
-          "state": "active"}],
-        {2: {"conclusion": "failure", "html_url": "u"},
-         3: {"conclusion": "failure", "html_url": "u"}},
+        [
+            {
+                "id": 2,
+                "name": "housekeeping",
+                "path": ".github/workflows/housekeeping.yml",
+                "state": "active",
+            },
+            {
+                "id": 3,
+                "name": "housecaptain",
+                "path": ".github/workflows/housecaptain.yml",
+                "state": "active",
+            },
+        ],
+        {
+            2: {"conclusion": "failure", "html_url": "u"},
+            3: {"conclusion": "failure", "html_url": "u"},
+        },
     )
     result = ci_green(ctx)
     assert result.status == Status.SKIP
@@ -97,9 +122,19 @@ def test_ci_green_never_grades_family_workflows(monkeypatch):
 
 def test_render_markdown_escapes_pipes():
     payload = {
-        "repo": "o/r", "visibility": "public", "checked_at": "now",
-        "results": [{"check": "readme", "status": "fail", "severity": "required",
-                     "details": "bad | table", "note": "", "fixable": False}],
+        "repo": "o/r",
+        "visibility": "public",
+        "checked_at": "now",
+        "results": [
+            {
+                "check": "readme",
+                "status": "fail",
+                "severity": "required",
+                "details": "bad | table",
+                "note": "",
+                "fixable": False,
+            }
+        ],
     }
     markdown = render_markdown(payload)
     assert "bad \\| table" in markdown

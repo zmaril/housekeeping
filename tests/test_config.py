@@ -41,11 +41,13 @@ def test_section():
 
 
 def test_unknown_keys_surfaced():
-    config = Config({
-        "checks": {"website": "off", "webiste": "off"},   # one typo
-        "stray-files": {"allow": ["x"]},                  # valid section
-        "stray-file": {"allow": ["y"]},                   # typo'd section
-    })
+    config = Config(
+        {
+            "checks": {"website": "off", "webiste": "off"},  # one typo
+            "stray-files": {"allow": ["x"]},  # valid section
+            "stray-file": {"allow": ["y"]},  # typo'd section
+        }
+    )
     known = {"website", "stray-files"}
     assert config.unknown_keys(known) == ["[stray-file]", "checks.webiste"]
     assert Config().unknown_keys(known) == []

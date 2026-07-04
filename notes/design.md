@@ -118,8 +118,10 @@ non-skipped check failed.
 | Check | Source | Pass criteria | Fix |
 |---|---|---|---|
 | `branch-protection` | API | Default branch has a ruleset (or classic protection): PRs required, status checks required, force-push and deletion blocked | Apply a standard ruleset via API |
-| `ci-exists` | clone | `.github/workflows/` has a workflow triggered on PR + push-to-main whose jobs cover **test** and **lint** for each detected ecosystem | Scaffold a workflow from per-ecosystem templates |
+| `ci-exists` | clone | Workflows trigger on PR + push, and **every detected language** (rust, js, python, ruby, go) has its own test, lint, and fmt signals in CI — combined tools (biome, rubocop) satisfy lint+fmt for their language | Scaffold a workflow from per-ecosystem templates |
 | `ci-green` | API | Latest completed default-branch run of **every** repo workflow (GitHub's `dynamic/` internals excluded) concluded `success` | none — report only |
+| `builds` | clone | Every build target runs in CI: package.json `build*` scripts per PR (transitive script resolution counts); tauri needs a per-PR compile check plus a full build on a scheduled workflow | none — report only |
+| `codegen-drift` | clone | Declared `[[codegen]]` regen commands run in CI followed by a zero-diff assertion (`git diff --exit-code`); wiring-only, skip when nothing declared | none — declare and wire by hand |
 | `typecheck` | clone | If the language supports typechecking, it runs in CI: TypeScript (tsc/vue-tsc/astro check), Python (mypy/pyright/ty), Clojure (clj-kondo/core.typed); untyped JavaScript fails with add-a-type-layer guidance; compiled ecosystems skip | TS: add a typecheck workflow (bun/npm) with preflight error count; other languages get guidance |
 | `dependabot` | clone + API | `.github/dependabot.yml` exists and covers every detected ecosystem (cargo, bun/npm, pip/uv, actions, …); vulnerability alerts + security updates enabled | Generate/extend the yml; enable settings via API |
 | `secret-scanning` | API | Secret scanning + push protection enabled (skip-with-note on private repos without Advanced Security) | Enable via API |

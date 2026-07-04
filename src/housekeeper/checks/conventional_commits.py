@@ -15,20 +15,29 @@ from ..fixing import apply_file_fix, confirm, console
 from ..registry import check, failed, fix_for, passed
 from .ci import workflow_files
 
-ENFORCERS = re.compile(r"commitlint|semantic-pull-request|conventional|cocogitto|convco", re.I)
-CONVENTIONAL = re.compile(r"^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)"
-                          r"(\([^)]+\))?!?: .+")
+ENFORCERS = re.compile(
+    r"commitlint|semantic-pull-request|conventional|cocogitto|convco", re.I
+)
+CONVENTIONAL = re.compile(
+    r"^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)"
+    r"(\([^)]+\))?!?: .+"
+)
 
 
 def enforced_in_ci(workdir: Path) -> bool:
-    return any(ENFORCERS.search(path.read_text(errors="replace"))
-               for path in workflow_files(workdir))
+    return any(
+        ENFORCERS.search(path.read_text(errors="replace"))
+        for path in workflow_files(workdir)
+    )
 
 
 def documented(workdir: Path) -> bool:
     for name in ("CONTRIBUTING.md", "README.md", "README"):
         path = workdir / name
-        if path.is_file() and "conventional commit" in path.read_text(errors="replace").lower():
+        if (
+            path.is_file()
+            and "conventional commit" in path.read_text(errors="replace").lower()
+        ):
             return True
     return False
 
@@ -89,13 +98,18 @@ def fix(ctx: RepoContext):
             "construction — no history rewrite, old commits just stay old."
         )
         if confirm(f"Set squash merges on {ctx.repo} to title from the PR title?"):
-            ctx.api(f"repos/{ctx.repo}", method="PATCH", input={
-                "squash_merge_commit_title": "PR_TITLE",
-                "squash_merge_commit_message": "PR_BODY",
-            })
+            ctx.api(
+                f"repos/{ctx.repo}",
+                method="PATCH",
+                input={
+                    "squash_merge_commit_title": "PR_TITLE",
+                    "squash_merge_commit_message": "PR_BODY",
+                },
+            )
             console.print("[green]squash merges now title from the PR title[/green]")
 
     if not enforced_in_ci(ctx.workdir):
+
         def write(workdir: Path) -> list[Path]:
             target = workdir / ".github" / "workflows" / "conventional.yml"
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -103,13 +117,16 @@ def fix(ctx: RepoContext):
             return [target]
 
         apply_file_fix(
-            ctx, "conventional-commits",
+            ctx,
+            "conventional-commits",
             describe="add .github/workflows/conventional.yml enforcing conventional PR titles",
             why="machine-readable commit titles unlock changelog and release automation "
-                "(release-please, semantic-release, conventional-changelog)",
+            "(release-please, semantic-release, conventional-changelog)",
             write_changes=write,
             commit_message="ci: enforce conventional PR titles",
         )
     if not documented(ctx.workdir):
-        console.print("[dim]also mention conventional commits in README/CONTRIBUTING — "
-                      "prose placement is a judgment call, so that part isn't automated[/dim]")
+        console.print(
+            "[dim]also mention conventional commits in README/CONTRIBUTING — "
+            "prose placement is a judgment call, so that part isn't automated[/dim]"
+        )

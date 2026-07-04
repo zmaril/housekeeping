@@ -47,10 +47,11 @@ def fix(ctx: RepoContext):
         return [target]
 
     apply_file_fix(
-        ctx, "straitjacket",
+        ctx,
+        "straitjacket",
         describe="add .github/workflows/straitjacket.yml running straitjacket on push + PR",
         why="runs the slop scanner on every push and PR, so LLM tells get flagged "
-            "at review time instead of accumulating in the codebase",
+        "at review time instead of accumulating in the codebase",
         write_changes=write,
         commit_message="ci: run straitjacket",
     )

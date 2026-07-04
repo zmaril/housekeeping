@@ -50,7 +50,9 @@ def b64(text):
 class FleetCtx:
     default_branch = "main"
 
-    def __init__(self, repo="o/r", files=None, conclusion="success", visibility="public"):
+    def __init__(
+        self, repo="o/r", files=None, conclusion="success", visibility="public"
+    ):
         self.repo = repo
         self._files = files or {}
         self._conclusion = conclusion
@@ -58,17 +60,26 @@ class FleetCtx:
 
     def api(self, path, params=None):
         if path.endswith("/actions/workflows"):
-            return {"workflows": [
-                {"id": 1, "path": p} for p in self._files if p.startswith(".github/workflows/")
-            ]}
+            return {
+                "workflows": [
+                    {"id": 1, "path": p}
+                    for p in self._files
+                    if p.startswith(".github/workflows/")
+                ]
+            }
         if "/actions/workflows/1/runs" in path:
-            return {"workflow_runs": [{"conclusion": self._conclusion, "html_url": "u"}]}
+            return {
+                "workflow_runs": [{"conclusion": self._conclusion, "html_url": "u"}]
+            }
         raise AssertionError(path)
 
     def try_api(self, path, **kwargs):
         if path.endswith("/contents/.github/workflows"):
-            return [{"name": p.split("/")[-1], "path": p} for p in self._files
-                    if p.startswith(".github/workflows/")]
+            return [
+                {"name": p.split("/")[-1], "path": p}
+                for p in self._files
+                if p.startswith(".github/workflows/")
+            ]
         for file_path, text in self._files.items():
             if path.endswith(f"/contents/{file_path}"):
                 return b64(text)
@@ -98,12 +109,18 @@ def test_required_file_missing_fails():
     assert report.status == "fail"
     assert "missing notes/design.md" in report.details
 
-    private = FleetCtx(files={".github/workflows/housekeeping.yml": GOOD_WORKFLOW},
-                       visibility="private")
+    private = FleetCtx(
+        files={".github/workflows/housekeeping.yml": GOOD_WORKFLOW},
+        visibility="private",
+    )
     assert captain_member(private, {}, required).status == "ok"  # public-scoped
 
-    has_it = FleetCtx(files={".github/workflows/housekeeping.yml": GOOD_WORKFLOW,
-                             "notes/design.md": "# design"})
+    has_it = FleetCtx(
+        files={
+            ".github/workflows/housekeeping.yml": GOOD_WORKFLOW,
+            "notes/design.md": "# design",
+        }
+    )
     assert captain_member(has_it, {}, required).status == "ok"
 
 
@@ -132,14 +149,18 @@ def test_self_auditing_member_is_ok():
 def test_captain_workflow_is_not_mistaken_for_self_audit():
     # The flagship has both; the captain workflow sorts first alphabetically
     # and also contains housekeeping@ — it must not satisfy the check.
-    ctx = FleetCtx(files={
-        ".github/workflows/housecaptain.yml": CAPTAIN_WORKFLOW,
-        ".github/workflows/housekeeping.yml": GOOD_WORKFLOW,
-    })
+    ctx = FleetCtx(
+        files={
+            ".github/workflows/housecaptain.yml": CAPTAIN_WORKFLOW,
+            ".github/workflows/housekeeping.yml": GOOD_WORKFLOW,
+        }
+    )
     report = captain_member(ctx, {})
     assert report.status == "ok", report.details
 
-    only_captain = FleetCtx(files={".github/workflows/housecaptain.yml": CAPTAIN_WORKFLOW})
+    only_captain = FleetCtx(
+        files={".github/workflows/housecaptain.yml": CAPTAIN_WORKFLOW}
+    )
     assert captain_member(only_captain, {}).status == "fail"
 
 
@@ -150,19 +171,22 @@ def test_member_without_workflow_fails():
 
 
 def test_missing_trigger_and_red_run_fail():
-    workflow = GOOD_WORKFLOW.replace("  schedule:\n    - cron: \"0 7 * * 1\"\n", "")
-    ctx = FleetCtx(files={".github/workflows/housekeeping.yml": workflow},
-                   conclusion="failure")
+    workflow = GOOD_WORKFLOW.replace('  schedule:\n    - cron: "0 7 * * 1"\n', "")
+    ctx = FleetCtx(
+        files={".github/workflows/housekeeping.yml": workflow}, conclusion="failure"
+    )
     report = captain_member(ctx, {})
     assert report.status == "fail"
     assert "schedule" in report.details and "failure" in report.details
 
 
 def test_policy_conflict_is_surfaced():
-    ctx = FleetCtx(files={
-        ".github/workflows/housekeeping.yml": GOOD_WORKFLOW,
-        ".housekeeping.toml": '[checks]\nconventional-commits = "off"\n',
-    })
+    ctx = FleetCtx(
+        files={
+            ".github/workflows/housekeeping.yml": GOOD_WORKFLOW,
+            ".housekeeping.toml": '[checks]\nconventional-commits = "off"\n',
+        }
+    )
     report = captain_member(ctx, {"conventional-commits": "required"})
     assert report.status == "conflict"
     assert "'off'" in report.details and "'required'" in report.details
@@ -181,7 +205,9 @@ def test_dispatch_outcomes():
 
     class DispatchCtx(FleetCtx):
         def __init__(self, status=None):
-            super().__init__(files={".github/workflows/housekeeping.yml": GOOD_WORKFLOW})
+            super().__init__(
+                files={".github/workflows/housekeeping.yml": GOOD_WORKFLOW}
+            )
             self._status = status
             self.dispatched = False
 
@@ -194,18 +220,25 @@ def test_dispatch_outcomes():
             return super().api(path, params)
 
     happy = DispatchCtx()
-    assert dispatch_self_audit(happy, ".github/workflows/housekeeping.yml") == "dispatched"
+    assert (
+        dispatch_self_audit(happy, ".github/workflows/housekeeping.yml") == "dispatched"
+    )
     assert happy.dispatched
     assert "not dispatchable" in dispatch_self_audit(
-        DispatchCtx(status=422), ".github/workflows/housekeeping.yml")
+        DispatchCtx(status=422), ".github/workflows/housekeeping.yml"
+    )
     assert "actions: write" in dispatch_self_audit(
-        DispatchCtx(status=403), ".github/workflows/housekeeping.yml")
+        DispatchCtx(status=403), ".github/workflows/housekeeping.yml"
+    )
 
 
-LOCKED_MANIFEST = MANIFEST.replace(
-    'name = "powderworks"',
-    'name = "powderworks"\ncaptain = "zmaril/powderworks"',
-) + '\n[policy]\nlocked = ["checks.stray-files", "stray-files.allow"]\n'
+LOCKED_MANIFEST = (
+    MANIFEST.replace(
+        'name = "powderworks"',
+        'name = "powderworks"\ncaptain = "zmaril/powderworks"',
+    )
+    + '\n[policy]\nlocked = ["checks.stray-files", "stray-files.allow"]\n'
+)
 
 
 def test_locked_manifest_parses_and_requires_captain(tmp_path):
@@ -227,17 +260,22 @@ def test_lock_violations_pure():
 
     config = {"checks": {"stray-files": "off"}, "stray-files": {"allow": ["x.md"]}}
     locked = ["checks.stray-files", "stray-files.allow", "checks.website"]
-    assert lock_violations(config, locked) == ["checks.stray-files", "stray-files.allow"]
+    assert lock_violations(config, locked) == [
+        "checks.stray-files",
+        "stray-files.allow",
+    ]
     assert lock_violations({}, locked) == []
 
 
 def test_captain_flags_locked_overrides_and_missing_fleet_declaration():
     locked = ["stray-files.allow"]
-    sneaky = FleetCtx(files={
-        ".github/workflows/housekeeping.yml": GOOD_WORKFLOW,
-        ".housekeeping.toml": 'fleet = "zmaril/powderworks"\n'
-                              '[stray-files]\nallow = ["scratch.md"]\n',
-    })
+    sneaky = FleetCtx(
+        files={
+            ".github/workflows/housekeeping.yml": GOOD_WORKFLOW,
+            ".housekeeping.toml": 'fleet = "zmaril/powderworks"\n'
+            '[stray-files]\nallow = ["scratch.md"]\n',
+        }
+    )
     report = captain_member(sneaky, {}, None, locked, "zmaril/powderworks")
     assert report.status == "conflict"
     assert "locked by fleet policy" in report.details
@@ -245,22 +283,26 @@ def test_captain_flags_locked_overrides_and_missing_fleet_declaration():
     undeclared = FleetCtx(files={".github/workflows/housekeeping.yml": GOOD_WORKFLOW})
     report = captain_member(undeclared, {}, None, locked, "zmaril/powderworks")
     assert report.status == "conflict"
-    assert 'declare fleet' in report.details
+    assert "declare fleet" in report.details
 
-    lawful = FleetCtx(files={
-        ".github/workflows/housekeeping.yml": GOOD_WORKFLOW,
-        ".housekeeping.toml": 'fleet = "zmaril/powderworks"\n',
-    })
+    lawful = FleetCtx(
+        files={
+            ".github/workflows/housekeeping.yml": GOOD_WORKFLOW,
+            ".housekeeping.toml": 'fleet = "zmaril/powderworks"\n',
+        }
+    )
     assert captain_member(lawful, {}, None, locked, "zmaril/powderworks").status == "ok"
 
 
 def test_apply_locked_is_law():
     from housekeeper.config import Config
 
-    config = Config({"checks": {"stray-files": "off"},
-                     "stray-files": {"allow": ["scratch.md"]}})
-    config.apply_locked(["checks.stray-files", "stray-files.allow"],
-                        {"stray-files": "required"})
+    config = Config(
+        {"checks": {"stray-files": "off"}, "stray-files": {"allow": ["scratch.md"]}}
+    )
+    config.apply_locked(
+        ["checks.stray-files", "stray-files.allow"], {"stray-files": "required"}
+    )
     assert config.severity("stray-files", "public") == "required"
     assert config.section("stray-files").get("allow") is None
 
@@ -268,6 +310,7 @@ def test_apply_locked_is_law():
 def test_policy_silence_and_agreement_are_fine():
     silent = FleetCtx(files={".github/workflows/housekeeping.yml": GOOD_WORKFLOW})
     assert policy_conflicts(silent, {"conventional-commits": "required"}) == []
-    agreeing = FleetCtx(files={
-        ".housekeeping.toml": '[checks]\nconventional-commits = "required"\n'})
+    agreeing = FleetCtx(
+        files={".housekeeping.toml": '[checks]\nconventional-commits = "required"\n'}
+    )
     assert policy_conflicts(agreeing, {"conventional-commits": "required"}) == []

@@ -37,8 +37,11 @@ def run(conclusion):
 
 def test_dynamic_workflows_are_ignored():
     ctx = FakeCtx(
-        [wf(1, "ci"), wf(2, "Dependency Graph", path="dynamic/graph"),
-         wf(3, "Dependabot Updates", path="dynamic/dependabot")],
+        [
+            wf(1, "ci"),
+            wf(2, "Dependency Graph", path="dynamic/graph"),
+            wf(3, "Dependabot Updates", path="dynamic/dependabot"),
+        ],
         {1: run("success"), 2: run("failure"), 3: run("failure")},
     )
     result = ci_green(ctx)
@@ -78,5 +81,7 @@ def test_disabled_workflows_do_not_gate():
 
 
 def test_no_real_workflows_skips():
-    ctx = FakeCtx([wf(1, "Dependency Graph", path="dynamic/graph")], {1: run("success")})
+    ctx = FakeCtx(
+        [wf(1, "Dependency Graph", path="dynamic/graph")], {1: run("success")}
+    )
     assert ci_green(ctx).status == Status.SKIP

@@ -9,8 +9,12 @@ from ..context import RepoContext
 from ..registry import check, failed, passed
 
 MIN_WORDS = 150
-INSTALL = re.compile(r"^#{1,6}\s.*(install|getting started|quick\s?start|setup)", re.I | re.M)
-USAGE = re.compile(r"^#{1,6}\s.*(usage|use|example|how|docs|documentation)", re.I | re.M)
+INSTALL = re.compile(
+    r"^#{1,6}\s.*(install|getting started|quick\s?start|setup)", re.I | re.M
+)
+USAGE = re.compile(
+    r"^#{1,6}\s.*(usage|use|example|how|docs|documentation)", re.I | re.M
+)
 # heading containing license/licenses/licensing/licence — a stray "license"
 # in prose satisfied the old substring floor by accident
 LICENSE_SECTION = re.compile(r"^#{1,6}\s.*\blicen[cs]\w*", re.I | re.M)
@@ -60,7 +64,11 @@ def readme(ctx: RepoContext):
         problems.append(f"broken relative links: {', '.join(broken[:5])}")
 
     if problems:
-        return failed("; ".join(problems),
-                      note="floor check only — the tidy-up skill does the quality pass")
-    return passed(f"{path.name} passes the floor",
-                  note="for the quality pass, use the tidy-up skill")
+        return failed(
+            "; ".join(problems),
+            note="floor check only — the tidy-up skill does the quality pass",
+        )
+    return passed(
+        f"{path.name} passes the floor",
+        note="for the quality pass, use the tidy-up skill",
+    )

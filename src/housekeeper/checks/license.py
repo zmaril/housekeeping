@@ -25,8 +25,10 @@ def license(ctx: RepoContext):
     if path and detected and detected != "NOASSERTION":
         return passed(f"{path.name} present, GitHub detects {detected}")
     if path:
-        return passed(f"{path.name} present",
-                      note="GitHub hasn't classified it (fine for nonstandard text)")
+        return passed(
+            f"{path.name} present",
+            note="GitHub hasn't classified it (fine for nonstandard text)",
+        )
     return failed("no LICENSE file")
 
 
@@ -59,7 +61,10 @@ SOFTWARE.
 def fix(ctx: RepoContext):
     import datetime
 
-    who = run(["git", "config", "user.name"], cwd=ctx.workdir).stdout.strip() or "the author"
+    who = (
+        run(["git", "config", "user.name"], cwd=ctx.workdir).stdout.strip()
+        or "the author"
+    )
     year = datetime.date.today().year
 
     def write(workdir: Path) -> list[Path]:
@@ -68,10 +73,11 @@ def fix(ctx: RepoContext):
         return [target]
 
     apply_file_fix(
-        ctx, "license",
+        ctx,
+        "license",
         describe=f"add an MIT LICENSE (copyright {year} {who})",
         why="without a license the default is all-rights-reserved copyright — nobody "
-            "can legally use, modify, or redistribute the code, however public the repo",
+        "can legally use, modify, or redistribute the code, however public the repo",
         write_changes=write,
         commit_message="chore: add MIT license",
     )

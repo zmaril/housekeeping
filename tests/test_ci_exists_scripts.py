@@ -25,11 +25,16 @@ jobs:
 
 
 def repo_with_check_script(tmp_path, scripts):
+    from housekeeper.context import Ecosystem
+
     workflows = tmp_path / ".github" / "workflows"
     workflows.mkdir(parents=True)
     (workflows / "ci.yml").write_text(WORKFLOW)
     (tmp_path / "package.json").write_text(json.dumps({"scripts": scripts}))
-    return SimpleNamespace(workdir=tmp_path)
+    return SimpleNamespace(
+        workdir=tmp_path,
+        ecosystems=[Ecosystem("bun", "package.json", "bun.lock", "bun", ("npm",))],
+    )
 
 
 def test_lint_hidden_in_package_script_is_found(tmp_path):

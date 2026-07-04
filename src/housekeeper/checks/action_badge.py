@@ -43,8 +43,10 @@ def action_badge(ctx: RepoContext):
         return failed("publishes an action but has no README to badge")
     if MARKETPLACE in readme.read_text(errors="replace"):
         return passed("README links its Marketplace listing")
-    return failed("publishes an action but the README has no Marketplace badge",
-                  note="assumes the action is (or will be) published on the Marketplace")
+    return failed(
+        "publishes an action but the README has no Marketplace badge",
+        note="assumes the action is (or will be) published on the Marketplace",
+    )
 
 
 @fix_for("action-badge")
@@ -54,21 +56,27 @@ def fix(ctx: RepoContext):
     action = action_file(ctx.workdir)
     slug = marketplace_slug(action) if action else None
     if action is None or not slug:
-        console.print("[yellow]could not derive a Marketplace slug from action.yml's name[/yellow]")
+        console.print(
+            "[yellow]could not derive a Marketplace slug from action.yml's name[/yellow]"
+        )
         return
     name = yaml.safe_load(action.read_text()).get("name")
-    badge = (f"[![{name} on the GitHub Marketplace]"
-             f"(https://img.shields.io/badge/marketplace-{slug.replace('-', '--')}-blue?logo=github)]"
-             f"(https://github.com/{MARKETPLACE.split('github.com/')[1]}{slug})")
+    badge = (
+        f"[![{name} on the GitHub Marketplace]"
+        f"(https://img.shields.io/badge/marketplace-{slug.replace('-', '--')}-blue?logo=github)]"
+        f"(https://github.com/{MARKETPLACE.split('github.com/')[1]}{slug})"
+    )
 
     def write(workdir: Path) -> list[Path]:
         # The check fails (and this fix runs) even when there's no README at
         # all — mypy caught the crash the original code had here.
         readme = find_readme(workdir) or workdir / "README.md"
-        lines = readme.read_text(errors="replace").splitlines() if readme.is_file() else []
+        lines = (
+            readme.read_text(errors="replace").splitlines() if readme.is_file() else []
+        )
         for i, line in enumerate(lines):
             if line.lstrip().startswith("# "):
-                lines[i:i + 1] = [line, "", badge]
+                lines[i : i + 1] = [line, "", badge]
                 break
         else:
             lines[0:0] = [badge, ""]
@@ -76,10 +84,11 @@ def fix(ctx: RepoContext):
         return [readme]
 
     apply_file_fix(
-        ctx, "action-badge",
+        ctx,
+        "action-badge",
         describe=f"add a Marketplace badge for {slug!r} under the README title",
         why="the badge is one-glance proof the action exists and where to get it — "
-            "the README is the storefront",
+        "the README is the storefront",
         write_changes=write,
         commit_message="readme: link the Marketplace listing",
     )

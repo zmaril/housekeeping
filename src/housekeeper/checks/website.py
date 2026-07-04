@@ -44,14 +44,20 @@ def website(ctx: RepoContext):
     broken = []
     checked = 0
     if readme_path:
-        links = list(dict.fromkeys(EXTERNAL_LINK.findall(readme_path.read_text(errors="replace"))))
+        links = list(
+            dict.fromkeys(
+                EXTERNAL_LINK.findall(readme_path.read_text(errors="replace"))
+            )
+        )
         for url in links[:MAX_LINKS]:
             checked += 1
             status = fetch_status(url)
             if status != 200:
                 broken.append(f"{url} → {status}")
         if len(links) > MAX_LINKS:
-            checked_note = f"only first {MAX_LINKS} of {len(links)} README links checked"
+            checked_note = (
+                f"only first {MAX_LINKS} of {len(links)} README links checked"
+            )
         else:
             checked_note = ""
     else:
@@ -62,7 +68,12 @@ def website(ctx: RepoContext):
     if problems:
         note = checked_note
         if not homepage:
-            note = ('set a homepage on the repo, or add [website] url = "..." or '
-                    'checks.website = "off" to .housekeeping.toml' + (f"; {note}" if note else ""))
+            note = (
+                'set a homepage on the repo, or add [website] url = "..." or '
+                'checks.website = "off" to .housekeeping.toml'
+                + (f"; {note}" if note else "")
+            )
         return failed("; ".join(problems), note)
-    return passed(f"homepage {homepage} reachable; {checked} README link(s) ok", checked_note)
+    return passed(
+        f"homepage {homepage} reachable; {checked} README link(s) ok", checked_note
+    )
