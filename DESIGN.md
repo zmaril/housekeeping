@@ -120,6 +120,7 @@ non-skipped check failed.
 | `branch-protection` | API | Default branch has a ruleset (or classic protection): PRs required, status checks required, force-push and deletion blocked | Apply a standard ruleset via API |
 | `ci-exists` | clone | `.github/workflows/` has a workflow triggered on PR + push-to-main whose jobs cover **test** and **lint** for each detected ecosystem | Scaffold a workflow from per-ecosystem templates |
 | `ci-green` | API | Latest completed default-branch run of **every** repo workflow (GitHub's `dynamic/` internals excluded) concluded `success` | none — report only |
+| `typecheck` | clone | TypeScript repos (root `tsconfig.json`) run a typechecker in CI — lint and tests stay green while types rot otherwise; skip for compiled ecosystems | Add a typecheck workflow (bun or npm), with a preflight error count |
 | `dependabot` | clone + API | `.github/dependabot.yml` exists and covers every detected ecosystem (cargo, bun/npm, pip/uv, actions, …); vulnerability alerts + security updates enabled | Generate/extend the yml; enable settings via API |
 | `secret-scanning` | API | Secret scanning + push protection enabled (skip-with-note on private repos without Advanced Security) | Enable via API |
 | `workflow-permissions` | API | Default workflow `GITHUB_TOKEN` is read-only and cannot approve PRs | Set via API |

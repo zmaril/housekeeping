@@ -4,6 +4,11 @@ Notable changes to housekeeping, newest first.
 
 ## v1.2.0 — 2026-07-04
 
+- `typecheck` check (required): TypeScript repos must run tsc (or kin) in
+  CI — found live when 82 type errors had piled up invisibly in a repo whose
+  CI linted and tested but never typechecked. The fix adds a typecheck
+  workflow and preflights the current error count so the first red run
+  isn't a surprise.
 - `conventional-commits` check (recommended; required on this repo): enforced
   in CI and documented, with recent-adherence as a note — history is never
   judged retroactively. The fix sets squash merges to title from the PR
