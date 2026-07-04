@@ -89,7 +89,10 @@ fires on pull_request + push + schedule, its latest default-branch run is
 green, and the member's `.housekeeping.toml` doesn't contradict fleet
 policy — divergence is surfaced as a conflict for a human to reconcile,
 never silently resolved. `housekeeper fleet` is the deep version: the full
-audit against every member from your machine, with a scoreboard.
+audit against every member from your machine, with a scoreboard. And
+`housekeeper captain --dispatch` (action input `dispatch: true`) is the
+fleet's "now" button: it triggers every member's self-audit immediately, so
+a new check reaches everyone without waiting out the weekly crons.
 
 ### Agent skill
 

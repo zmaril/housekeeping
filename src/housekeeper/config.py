@@ -70,3 +70,15 @@ class Config:
         """Per-check settings, e.g. [website] url = "..."."""
         value = self._repo.get(name, {})
         return value if isinstance(value, dict) else {}
+
+    def unknown_keys(self, known_checks: set[str]) -> list[str]:
+        """Config keys that nothing reads — a typo, or config from a newer
+        housekeeping. Surfaced, never silently ignored."""
+        problems = []
+        for section in self._repo:
+            if section != "checks" and section not in known_checks:
+                problems.append(f"[{section}]")
+        for check_name in self._repo.get("checks", {}):
+            if check_name not in known_checks:
+                problems.append(f"checks.{check_name}")
+        return sorted(problems)

@@ -57,6 +57,16 @@ def audit(repo: str, only: str | None = None) -> dict:
         ctx.ensure_workdir()
 
     rows = []
+    unknown = ctx.config.unknown_keys(set(CHECKS))
+    if unknown:
+        rows.append({
+            "check": "config",
+            "status": Status.FAIL.value,
+            "severity": "required",
+            "details": f"unknown keys in .housekeeping.toml: {', '.join(unknown)}",
+            "note": "a typo, or config from a newer housekeeping — nothing reads these",
+            "fixable": False,
+        })
     for check in selected:
         severity = ctx.config.severity(check.name, visibility)
         if severity == "off":
@@ -153,18 +163,26 @@ CAPTAIN_STYLE = {"ok": ("✓", "green"), "fail": ("✗", "red"),
 
 
 def cmd_captain(args) -> int:
-    from .captain import MemberReport, captain_member
+    from .captain import MemberReport, captain_member, dispatch_self_audit
 
     manifest = load_manifest_or_exit(args.manifest)
+    bad_policy = bool(manifest.unknown_policy)
+    if bad_policy:
+        console.print(f"[red]unknown policy keys in the manifest: "
+                      f"{', '.join(manifest.unknown_policy)}[/red] — a typo, or policy "
+                      "from a newer housekeeping than this captain; fix one of the two")
+
     reports = []
+    contexts: dict[str, RepoContext] = {}
     for member in manifest.members:
         if member.parked:
             reports.append(MemberReport(member.repo, "parked",
                                         "in the fleet, not yet expected to self-audit",
                                         note=member.note))
             continue
+        contexts[member.repo] = ctx = RepoContext(member.repo)
         try:
-            report = captain_member(RepoContext(member.repo), manifest.policy_checks,
+            report = captain_member(ctx, manifest.policy_checks,
                                     manifest.required_files)
         except GhError as e:
             report = MemberReport(member.repo, "error", f"api error: {e}")
@@ -187,12 +205,21 @@ def cmd_captain(args) -> int:
         lines.append("| " + " | ".join(c.replace("|", "\\|") for c in cells) + " |")
     console.print(table)
 
+    if getattr(args, "dispatch", False):
+        for report in reports:
+            if report.status == "parked" or not report.workflow_path:
+                continue
+            outcome = dispatch_self_audit(contexts[report.repo], report.workflow_path)
+            console.print(f"[dim]{report.repo}: {outcome}[/dim]")
+            lines.append(f"\ndispatch {report.repo}: {outcome}")
+
     summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary_path:
         with open(summary_path, "a") as summary:
             summary.write("\n".join(lines) + "\n")
 
-    return 1 if any(r.status in ("fail", "conflict", "error") for r in reports) else 0
+    failing = any(r.status in ("fail", "conflict", "error") for r in reports)
+    return 1 if failing or bad_policy else 0
 
 
 def cmd_fleet(args) -> int:
@@ -310,6 +337,8 @@ def main() -> None:
     p_captain = sub.add_parser(
         "captain", help="check every fleet member is auditing itself (API-only)")
     p_captain.add_argument("manifest", nargs="?", help="path to housecaptain.toml")
+    p_captain.add_argument("--dispatch", action="store_true",
+                           help="also trigger every member's self-audit now")
     p_captain.set_defaults(func=cmd_captain)
 
     p_fleet = sub.add_parser("fleet", help="full local audit of every fleet member")

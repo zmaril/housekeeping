@@ -2,6 +2,20 @@
 
 Notable changes to housekeeping, newest first.
 
+## v1.4.0 — 2026-07-04
+
+- Captain dispatch: `housekeeper captain --dispatch` (action input
+  `dispatch: true`) triggers every member's self-audit immediately — new
+  checks reach the fleet when you push the button, not a week of crons
+  later. Members' housekeeping workflows must carry the workflow_dispatch
+  trigger, which the captain now requires.
+- Unknown `[policy.*]` keys in housecaptain.toml are surfaced and fail the
+  captain — a typo, or policy from a newer housekeeping than the captain
+  running it; silence was against the house ethos either way.
+- Same at member scale: unknown keys in `.housekeeping.toml` (a typo'd
+  section, a `checks.webiste`) fail the audit with a `config` row instead
+  of silently doing nothing.
+
 ## v1.3.0 — 2026-07-04
 
 - `stray-files` grew a location policy: one todo pile (default `todo.txt`),

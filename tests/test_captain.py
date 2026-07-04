@@ -33,6 +33,7 @@ on:
   pull_request:
   schedule:
     - cron: "0 7 * * 1"
+  workflow_dispatch:
 jobs:
   housekeeping:
     runs-on: ubuntu-latest
@@ -165,6 +166,40 @@ def test_policy_conflict_is_surfaced():
     report = captain_member(ctx, {"conventional-commits": "required"})
     assert report.status == "conflict"
     assert "'off'" in report.details and "'required'" in report.details
+
+
+def test_unknown_policy_keys_are_surfaced(tmp_path):
+    path = tmp_path / "housecaptain.toml"
+    path.write_text(MANIFEST + '\n[policy.cheks]\ntypo = "oops"\n')
+    manifest = load_manifest(path)
+    assert manifest.unknown_policy == ["cheks"]
+
+
+def test_dispatch_outcomes():
+    from housekeeper.captain import dispatch_self_audit
+    from housekeeper.context import GhError
+
+    class DispatchCtx(FleetCtx):
+        def __init__(self, status=None):
+            super().__init__(files={".github/workflows/housekeeping.yml": GOOD_WORKFLOW})
+            self._status = status
+            self.dispatched = False
+
+        def api(self, path, params=None, method="GET", input=None):
+            if path.endswith("/dispatches"):
+                if self._status:
+                    raise GhError(self._status, "nope")
+                self.dispatched = True
+                return True
+            return super().api(path, params)
+
+    happy = DispatchCtx()
+    assert dispatch_self_audit(happy, ".github/workflows/housekeeping.yml") == "dispatched"
+    assert happy.dispatched
+    assert "not dispatchable" in dispatch_self_audit(
+        DispatchCtx(status=422), ".github/workflows/housekeeping.yml")
+    assert "actions: write" in dispatch_self_audit(
+        DispatchCtx(status=403), ".github/workflows/housekeeping.yml")
 
 
 def test_policy_silence_and_agreement_are_fine():
