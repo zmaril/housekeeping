@@ -12,6 +12,9 @@ Notable changes to housekeeping, newest first.
 - Unknown `[policy.*]` keys in housecaptain.toml are surfaced and fail the
   captain — a typo, or policy from a newer housekeeping than the captain
   running it; silence was against the house ethos either way.
+- Same at member scale: unknown keys in `.housekeeping.toml` (a typo'd
+  section, a `checks.webiste`) fail the audit with a `config` row instead
+  of silently doing nothing.
 
 ## v1.3.0 — 2026-07-04
 

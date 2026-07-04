@@ -57,6 +57,16 @@ def audit(repo: str, only: str | None = None) -> dict:
         ctx.ensure_workdir()
 
     rows = []
+    unknown = ctx.config.unknown_keys(set(CHECKS))
+    if unknown:
+        rows.append({
+            "check": "config",
+            "status": Status.FAIL.value,
+            "severity": "required",
+            "details": f"unknown keys in .housekeeping.toml: {', '.join(unknown)}",
+            "note": "a typo, or config from a newer housekeeping — nothing reads these",
+            "fixable": False,
+        })
     for check in selected:
         severity = ctx.config.severity(check.name, visibility)
         if severity == "off":
