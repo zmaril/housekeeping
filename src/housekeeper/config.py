@@ -32,6 +32,7 @@ DEFAULT_SEVERITY = {
     "conventional-commits": "recommended",
     "straitjacket": "required",
     "readme": "required",
+    "readme-quality": "recommended",
     "action-badge": "recommended",
     "website": "required",
     "license": "required",

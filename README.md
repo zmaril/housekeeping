@@ -9,8 +9,9 @@ rerun-until-green test retries, a pinned (non-floating) CI toolchain, dependabot
 coverage, secret scanning, read-only workflow tokens, lockfiles committed and in
 sync, gitignore coverage, CODEOWNERS routing review,
 [straitjacket](https://github.com/zmaril/Straitjacket) wired into CI, a README
-that clears the floor, a reachable website, a license, sane repo metadata, and
-no stale PRs or branches. One repo at a time; run it when you
+that clears the floor and carries a usage example, a reachable website, a
+license, sane repo metadata, and no stale PRs or branches. One repo at a time;
+run it when you
 touch a repo.
 
 Checking is always read-only. Fixing is separate, explains itself, and asks

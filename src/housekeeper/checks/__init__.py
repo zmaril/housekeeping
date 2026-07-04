@@ -23,6 +23,7 @@ from . import (  # noqa: F401
     conventional_commits,
     straitjacket,
     readme,
+    readme_quality,
     action_badge,
     website,
     license,

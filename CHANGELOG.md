@@ -20,6 +20,17 @@ Notable changes to housekeeping, newest first.
   `zmaril/straitjacket@v0.2.3` action instead of installing from `main`, so a new
   straitjacket rule can't fail this repo's CI until we choose to bump.
 
+## v0.12.0 — 2026-07-04
+
+- `readme-quality` check (recommended): deterministic quality nudges on top of the
+  `readme` floor. Flags a README with no fenced code example / command block (the
+  reader is left guessing how to run the thing) and any placeholder heading
+  (`## TODO`, `## TBD`, `## FIXME`, `## WIP` — an unfinished doc shipped as done).
+  The required floor stays in `readme`; the taste pass — does the opening actually
+  say what this *is* — stays with the tidy-up skill, since detecting it well needs
+  judgement, not a regex. Grounded in Dan Luu's *corp-eng-blogs* (specificity over
+  abstraction).
+
 ## v0.11.0 — 2026-07-04
 
 - Internal: per-language / per-ecosystem knowledge is now consolidated in one
