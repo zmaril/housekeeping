@@ -2,10 +2,15 @@
 
 Notable changes to housekeeping, newest first.
 
-## v1.13.0 — 2026-07-04
+## v0.13.0 — 2026-07-04
 
+- **Re-baselined to 0.x.** Housekeeping had jumped to `v1.x` while it's still
+  young and evolving fast; nothing external depends on it, so the versions are
+  remapped `v1.N → v0.N` (this release was `v1.13.0`) and the published `v1.x`
+  releases and the moving `v1` tag are retired. Straitjacket (0.2.x) is the
+  sibling model — pre-1.0 until the check set settles.
 - Docs: the recommended action usage now pins the **full version**
-  (`zmaril/housekeeping@v1.12.0`) instead of the moving `@v1` tag. Housekeeping
+  (`zmaril/housekeeping@v0.9.0`) instead of the moving `@v0` tag. Housekeeping
   adds checks in minor releases, and a floating major tag applies them to a
   consumer's repo the moment they ship — a required check they never opted into,
   turning an unrelated PR red. Pinning means new checks arrive only on a
@@ -15,7 +20,7 @@ Notable changes to housekeeping, newest first.
   `zmaril/straitjacket@v0.2.3` action instead of installing from `main`, so a new
   straitjacket rule can't fail this repo's CI until we choose to bump.
 
-## v1.11.0 — 2026-07-04
+## v0.11.0 — 2026-07-04
 
 - Internal: per-language / per-ecosystem knowledge is now consolidated in one
   module, `languages.py`. Previously "cargo" (and every other ecosystem) was
@@ -27,7 +32,7 @@ Notable changes to housekeeping, newest first.
   instead of carrying its own table. Pure refactor — no behaviour change, same
   148 tests. Adding a language is now one registry entry.
 
-## v1.10.0 — 2026-07-04
+## v0.10.0 — 2026-07-04
 
 - `ci-scheduled-run` check (recommended): CI should run on a schedule, not only on
   push/PR. Push-only CI never exercises the repo between commits, so bitrot — an
@@ -44,7 +49,7 @@ Notable changes to housekeeping, newest first.
   files. Retries have legitimate uses, so except it where deliberate. The mirror of
   `ci-continue-on-error`; grounded in Dan Luu's *wat*.
 
-## v1.9.0 — 2026-07-04
+## v0.9.0 — 2026-07-04
 
 - `ci-continue-on-error` check (required): a test/lint/build step must not be
   allowed to fail silently. `continue-on-error: true` lets a step (or a whole job)
@@ -64,7 +69,7 @@ Notable changes to housekeeping, newest first.
   ownership rule; softens to recommended since it's ceremony on a solo repo.
   Fixable: scaffolds `.github/CODEOWNERS` with a catch-all owner.
 
-## v1.8.0 — 2026-07-04
+## v0.8.0 — 2026-07-04
 
 - Fleet check-matrix dashboard: `housekeeper fleet --html FILE` writes a
   self-contained, theme-aware HTML page — a matrix of every fleet repo (rows)
@@ -77,7 +82,7 @@ Notable changes to housekeeping, newest first.
   name in the dashboard. The key is allow-listed, so it isn't reported as unknown
   config.
 
-## v1.7.0 — 2026-07-04
+## v0.7.0 — 2026-07-04
 
 - `required-checks` check (required): the default branch must actually *require*
   every status check that runs on a PR — not just require PRs. Branch protection
@@ -95,7 +100,7 @@ Notable changes to housekeeping, newest first.
   past; a job-level `if:` keeps it a *skipped* (green) required check on unrelated
   PRs, so scoping stays required-check-safe.
 
-## v1.6.0 — 2026-07-04
+## v0.6.0 — 2026-07-04
 
 - Multi-language CI coverage: `ci-exists` now demands test, lint, AND fmt
   signals per detected language (rust, js, python, ruby, go) — a repo whose
@@ -113,7 +118,7 @@ Notable changes to housekeeping, newest first.
 - Dogfood: housekeeping's own CI gained `ruff format --check` and the
   codebase is now ruff-formatted.
 
-## v1.5.0 — 2026-07-04
+## v0.5.0 — 2026-07-04
 
 - Policy locks: `[policy] locked = [...]` (plus a top-level `captain =
   "owner/repo"`) in housecaptain.toml makes fleet policy law instead of
@@ -123,7 +128,7 @@ Notable changes to housekeeping, newest first.
   a stray file and except itself in the same diff. The captain backstops the
   last escape (deleting the fleet line is a surfaced conflict).
 
-## v1.4.0 — 2026-07-04
+## v0.4.0 — 2026-07-04
 
 - Captain dispatch: `housekeeper captain --dispatch` (action input
   `dispatch: true`) triggers every member's self-audit immediately — new
@@ -137,7 +142,7 @@ Notable changes to housekeeping, newest first.
   section, a `checks.webiste`) fail the audit with a `config` row instead
   of silently doing nothing.
 
-## v1.3.0 — 2026-07-04
+## v0.3.0 — 2026-07-04
 
 - `stray-files` grew a location policy: one todo pile (default `todo.txt`),
   notes corralled in one directory (default `notes/`), everything
@@ -154,20 +159,20 @@ Notable changes to housekeeping, newest first.
 - todo.txt retired: the fleet ledger is housecaptain.toml in
   zmaril/powderworks now (parked members carry their reasons on the roster).
 
-## v1.2.2 — 2026-07-04
+## v0.2.2 — 2026-07-04
 
 - `ci-green` never grades housekeeping-family workflows (self-audit,
   captain): on a flagship carrying both, each graded the other and one red
   deadlocked the pair — red because the other was red, forever. The family
   audits the repo; ci-green grades the repo's own CI.
 
-## v1.2.1 — 2026-07-04
+## v0.2.1 — 2026-07-04
 
 - The captain no longer mistakes a member's captain workflow for its
   self-audit (both use the action; found on the flagship itself, where
   housecaptain.yml sorts before housekeeping.yml).
 
-## v1.2.0 — 2026-07-04
+## v0.2.0 — 2026-07-04
 
 - Fleet captain: `housecaptain.toml` names a fleet; `housekeeper captain`
   (API-only, also the action's `captain:` input) checks every member is
@@ -193,7 +198,7 @@ that matter to Action consumers also get a version, because `uses:` resolves
 tags — `v1` moves with compatible releases, `vX.Y.Z` tags are immutable. For
 the CLI, plugin, and skill, the git SHA remains the real version.
 
-## v1.1.0 — 2026-07-04
+## v0.1.0 — 2026-07-04
 
 - `ci-exists` resolves `bun/npm/pnpm/yarn run <script>` through package.json
   scripts before pattern-matching, so a linter hidden behind `bun run check`
@@ -210,15 +215,15 @@ the CLI, plugin, and skill, the git SHA remains the real version.
   slug from the action's name and inserts the badge under the title.
 - housekeeping's own README carries its Marketplace badge.
 
-## v1.0.1 — 2026-07-03
+## v0.0.1 — 2026-07-03
 
 - Marketplace-valid action metadata: display name "Powderworks Housekeeping"
   (bare "housekeeping" collides with an existing name), description under
-  125 characters. The `uses: zmaril/housekeeping@v1` path is unchanged.
+  125 characters. The `uses: zmaril/housekeeping@v0` path is unchanged.
 
-## v1.0.0 — 2026-07-03
+## v0.0.0 — 2026-07-03
 
-- GitHub Action: `uses: zmaril/housekeeping@v1` runs the audit in any
+- GitHub Action: `uses: zmaril/housekeeping@v0` runs the audit in any
   repo's CI with results in the job summary. Admin-only settings the
   workflow token can't read skip with a note instead of guessing, and
   `ci-green` excludes the workflow it runs inside (a transient red would

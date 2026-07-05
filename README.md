@@ -56,11 +56,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: zmaril/housekeeping@v1.12.0   # pin the full version — newest is on the Releases page
+      - uses: zmaril/housekeeping@v0.9.0   # pin the full version — newest is on the Releases page
 ```
 
 **Pin the full version, not a moving major tag.** Housekeeping adds checks in
-minor releases; a floating `@v1` would apply every new check to your repo the
+minor releases; a floating `@v0` would apply every new check to your repo the
 moment it ships, turning an unrelated PR red with something you never opted
 into. Pin the exact release (or a commit SHA) so new checks arrive only when you
 deliberately bump — on a PR that's *about* that upgrade, where you can read the
