@@ -160,6 +160,7 @@ non-skipped check failed.
 | `conventional-commits` | clone + API | Enforced in CI (PR-title check or commitlint) and mentioned in README/CONTRIBUTING; recent default-branch adherence reported as a note, never judged retroactively | Set squash-title-from-PR-title; add the PR-title workflow |
 | `stylelint` | clone | If the repo has stylesheets (`.css`/`.scss`/`.less`) or an existing stylelint config, a config is present **and** stylelint runs in CI; skip when there are no stylesheets | Scaffold `.stylelintrc.json` + a CI step |
 | `vale` | clone | A `.vale.ini` (with its `StylesPath`) is present **and** vale runs in CI. Overlaps with `straitjacket` by design — straitjacket scans for slop, vale enforces house style and terminology; wiring only, findings are vale's own business | Scaffold `.vale.ini` + `styles/` + a CI step |
+| `codespell` | clone | codespell runs in CI. The fleet's spell checker, split from vale on purpose: vale's dictionary spell-check false-positives on every unknown jargon word, so vale does style/terms and codespell does spelling — it flags only *known* misspellings, so it can't cry wolf on a term it's never seen. Wiring only | Scaffold `.codespellrc` + a CI step |
 
 Ecosystem detection lives once in `context.py` (look for `Cargo.toml`,
 `package.json` + which lockfile, `pyproject.toml`, `go.mod`,

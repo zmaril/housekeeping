@@ -10,9 +10,9 @@ coverage, secret scanning, read-only workflow tokens, lockfiles committed and in
 sync, gitignore coverage, CODEOWNERS routing review, TODO/FIXME markers kept in
 the todo file rather than scattered,
 [straitjacket](https://github.com/zmaril/Straitjacket) wired into CI, stylelint
-on stylesheets and vale on prose, a README that clears the floor, a reachable
-website, a license, sane repo metadata, and no stale PRs or branches. One repo
-at a time; run it when you touch a repo.
+on stylesheets, vale on prose style and codespell on typos, a README that clears
+the floor, a reachable website, a license, sane repo metadata, and no stale PRs
+or branches. One repo at a time; run it when you touch a repo.
 
 Checking is always read-only. Fixing is separate, explains itself, and asks
 before changing anything; file fixes land on a `housekeeping/<check>` branch
@@ -169,7 +169,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: zmaril/housekeeping@v1
+      - uses: zmaril/housekeeping@v0.9.0   # pin the full version
         with:
           captain: housecaptain.toml
           sync-configs: true

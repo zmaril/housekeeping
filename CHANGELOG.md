@@ -12,6 +12,12 @@ Notable changes to housekeeping, newest first.
   present and vale runs in CI. Overlaps with `straitjacket` by design —
   straitjacket scans for slop, vale enforces house style and terminology.
   Fixable: scaffolds `.vale.ini` + `styles/` + a workflow.
+- `codespell` check (recommended): codespell runs in CI. Split from vale on
+  purpose — vale's dictionary spell-check false-positives on every unknown
+  jargon word, so vale is left to style/terminology and codespell does
+  spelling. codespell flags only *known* misspellings, so it can't cry wolf on
+  a term it's never seen while still catching real typos. Fixable: scaffolds
+  `.codespellrc` + a workflow.
 - Managed configs: the fleet captain can now **own** a check's config and push
   it outward. `[[policy.managed-config]]` entries in `housecaptain.toml` point
   a member destination at a canonical source under `.fleet/` in the captain

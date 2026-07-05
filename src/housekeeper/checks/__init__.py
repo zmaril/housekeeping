@@ -25,6 +25,7 @@ from . import (  # noqa: F401
     straitjacket,
     stylelint,
     vale,
+    codespell,
     readme,
     action_badge,
     website,

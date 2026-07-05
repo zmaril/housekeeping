@@ -34,6 +34,7 @@ DEFAULT_SEVERITY = {
     "straitjacket": "required",
     "stylelint": "recommended",
     "vale": "recommended",
+    "codespell": "recommended",
     "readme": "required",
     "action-badge": "recommended",
     "website": "required",
