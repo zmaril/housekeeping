@@ -75,6 +75,16 @@ def test_unreachable_member_rendered():
     assert "unreachable" in out
 
 
+def test_ci_version_rows_and_repeated_footer():
+    members = [M("o/a")]
+    payloads = [payload("o/a", [row("license", "pass")])]
+    payloads[0]["ci_versions"] = {"housekeeping": "v1", "straitjacket": "v0.2.3"}
+    out = render_matrix("f", members, payloads)
+    assert "housekeeping CI" in out and "straitjacket CI" in out  # the two meta rows
+    assert "v0.2.3" in out  # the pinned straitjacket ref is shown
+    assert "<tfoot>" in out and out.count(">a<") == 2  # repo header repeated at bottom
+
+
 def test_render_document_is_a_full_standalone_page():
     members = [M("o/a")]
     payloads = [payload("o/a", [row("license", "pass")])]

@@ -2,6 +2,17 @@
 
 Notable changes to housekeeping, newest first.
 
+## v0.16.0 — 2026-07-05
+
+- Fleet dashboard now shows **which shared-CI ref each repo pins** — two version
+  rows (`housekeeping CI`, `straitjacket CI`) above the check matrix, read from
+  each member's cloned workflows (`zmaril/…@REF`, an `install.sh` line, or `self`
+  when the repo is the tool). Surfaces fleet drift at a glance: who's on an old
+  pin, who floats on `main`. Extracted in the new `ci_versions` module and folded
+  into the audit payload.
+- Dashboard repeats the repo logo/name headers in a `<tfoot>`, framing the matrix
+  top and bottom.
+
 ## v0.15.0 — 2026-07-05
 
 - `stylelint` check (recommended): if a repo has stylesheets (`.css`/`.scss`/
