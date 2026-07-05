@@ -23,6 +23,8 @@ from . import (  # noqa: F401
     stray_todos,
     conventional_commits,
     straitjacket,
+    stylelint,
+    vale,
     readme,
     action_badge,
     website,

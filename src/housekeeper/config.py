@@ -32,6 +32,8 @@ DEFAULT_SEVERITY = {
     "stray-todos": "recommended",
     "conventional-commits": "recommended",
     "straitjacket": "required",
+    "stylelint": "recommended",
+    "vale": "recommended",
     "readme": "required",
     "action-badge": "recommended",
     "website": "required",

@@ -1,10 +1,16 @@
 import base64
 
+import pytest
+
 from housekeeper.captain import (
+    ManagedConfig,
     captain_member,
+    expand_managed_config,
     load_manifest,
+    managed_config_notes,
     policy_conflicts,
 )
+from housekeeper.context import GhError
 
 MANIFEST = """\
 name = "powderworks"
@@ -305,6 +311,216 @@ def test_apply_locked_is_law():
     )
     assert config.severity("stray-files", "public") == "required"
     assert config.section("stray-files").get("allow") is None
+
+
+STYLELINT_MC = """
+[[policy.managed-config]]
+check = "stylelint"
+paths = { ".stylelintrc.json" = ".fleet/stylelintrc.json" }
+"""
+
+
+def test_managed_config_parses(tmp_path):
+    path = tmp_path / "housecaptain.toml"
+    path.write_text(MANIFEST + STYLELINT_MC)
+    manifest = load_manifest(path)
+    mc = manifest.managed_configs[0]
+    assert mc.check == "stylelint"
+    assert mc.paths == {".stylelintrc.json": ".fleet/stylelintrc.json"}
+    assert mc.scope == "all"
+
+
+def test_managed_config_source_must_live_under_fleet(tmp_path):
+    path = tmp_path / "housecaptain.toml"
+    path.write_text(
+        MANIFEST + '\n[[policy.managed-config]]\ncheck = "vale"\n'
+        'paths = { ".vale.ini" = "configs/vale.ini" }\n'
+    )
+    with pytest.raises(ValueError, match=r"\.fleet"):
+        load_manifest(path)
+
+
+def test_managed_config_rejects_bad_scope(tmp_path):
+    path = tmp_path / "housecaptain.toml"
+    path.write_text(
+        MANIFEST + '\n[[policy.managed-config]]\ncheck = "vale"\nscope = "sometimes"\n'
+        'paths = { ".vale.ini" = ".fleet/vale.ini" }\n'
+    )
+    with pytest.raises(ValueError, match="scope"):
+        load_manifest(path)
+
+
+def test_expand_managed_config_directory(tmp_path):
+    vocab = tmp_path / ".fleet" / "vale" / "styles" / "Vocab"
+    vocab.mkdir(parents=True)
+    (vocab / "accept.txt").write_text("Housekeeper\n")
+    mc = ManagedConfig("vale", {"styles/": ".fleet/vale/styles/"})
+    assert expand_managed_config(tmp_path, mc) == {
+        "styles/Vocab/accept.txt": "Housekeeper\n"
+    }
+
+
+def test_managed_config_notes_flag_drift(tmp_path):
+    (tmp_path / ".fleet").mkdir()
+    (tmp_path / ".fleet" / "stylelintrc.json").write_text('{"extends": "fleet"}\n')
+    mc = ManagedConfig("stylelint", {".stylelintrc.json": ".fleet/stylelintrc.json"})
+
+    stale = FleetCtx(files={".stylelintrc.json": "{}\n"})
+    notes = managed_config_notes(stale, [mc], tmp_path)
+    assert notes and "stylelint config drifts" in notes[0] and "stale" in notes[0]
+
+    synced = FleetCtx(files={".stylelintrc.json": '{"extends": "fleet"}\n'})
+    assert managed_config_notes(synced, [mc], tmp_path) == []
+
+
+def test_managed_config_drift_surfaces_on_captain_report(tmp_path):
+    (tmp_path / ".fleet").mkdir()
+    (tmp_path / ".fleet" / "stylelintrc.json").write_text('{"extends": "fleet"}\n')
+    mc = ManagedConfig("stylelint", {".stylelintrc.json": ".fleet/stylelintrc.json"})
+    ctx = FleetCtx(
+        files={
+            ".github/workflows/housekeeping.yml": GOOD_WORKFLOW,
+            ".stylelintrc.json": "{}\n",
+        }
+    )
+    report = captain_member(ctx, {}, managed_configs=[mc], manifest_dir=tmp_path)
+    # Drift is informational — the member is still "ok", just noted.
+    assert report.status == "ok"
+    assert "stylelint config drifts" in report.note
+
+
+def _tree_sha(base_tree, entries):
+    key = sorted((e["path"], e["content"]) for e in entries)
+    return f"tree:{base_tree}:{key!r}"
+
+
+class SyncCtx:
+    """Fake git-data API for exercising sync_member_config without a network."""
+
+    default_branch = "main"
+
+    def __init__(self, contents=None, branch_tree=None, open_pr=False, repo="o/r"):
+        self.repo = repo
+        self._contents = contents or {}  # member path -> content at default branch
+        self._branch_tree = branch_tree  # tree sha of the sync branch tip, or None
+        self._open_pr = open_pr
+        self.writes = []  # (method, path) for every mutating call
+
+    def try_api(self, path, none_on=(404,), **kwargs):
+        try:
+            return self.api(path, **kwargs)
+        except GhError as e:
+            if e.status in none_on:
+                return None
+            raise
+
+    def api(self, path, method="GET", input=None, params=None):
+        # Creating a tree is a content-addressed computation (a dangling object),
+        # not a mutation — only commits/refs/pulls count as churn.
+        if method != "GET" and not path.endswith("/git/trees"):
+            self.writes.append((method, path))
+        if "/contents/" in path:
+            key = path.split("/contents/", 1)[1]
+            if key in self._contents:
+                return b64(self._contents[key])
+            raise GhError(404, "not found")
+        if path.endswith("/git/ref/heads/main"):
+            return {"object": {"sha": "HEAD"}}
+        if "/git/ref/heads/housekeeping/fleet-config-" in path:
+            if self._branch_tree is None:
+                raise GhError(404, "no such branch")
+            return {"object": {"sha": "BRANCHHEAD"}}
+        if path.endswith("/git/commits/HEAD"):
+            return {"tree": {"sha": "T_main"}}
+        if path.endswith("/git/commits/BRANCHHEAD"):
+            return {"tree": {"sha": self._branch_tree}}
+        if path.endswith("/git/trees"):
+            return {"sha": _tree_sha(input["base_tree"], input["tree"])}
+        if path.endswith("/git/commits"):
+            return {"sha": "NEWCOMMIT"}
+        if path.endswith("/git/refs"):
+            return {"ref": input["ref"]}
+        if "/git/refs/heads/" in path:
+            return True
+        if "/pulls?" in path:
+            return [{"number": 1}] if self._open_pr else []
+        if path.endswith("/pulls"):
+            return {"number": 2, "html_url": "u"}
+        raise AssertionError(path)
+
+
+def _stylelint_mc(tmp_path, canonical='{"extends": "fleet"}\n'):
+    (tmp_path / ".fleet").mkdir()
+    (tmp_path / ".fleet" / "stylelintrc.json").write_text(canonical)
+    mc = ManagedConfig("stylelint", {".stylelintrc.json": ".fleet/stylelintrc.json"})
+    return mc, expand_managed_config(tmp_path, mc)
+
+
+def test_sync_opens_pr_on_drift(tmp_path):
+    from housekeeper.captain import sync_member_config
+
+    _, desired = _stylelint_mc(tmp_path)
+    ctx = SyncCtx(contents={".stylelintrc.json": "{}\n"})
+    outcome = sync_member_config(ctx, "stylelint", desired, assume_yes=True)
+    assert outcome == "sync PR opened"
+    methods = {m for m, _ in ctx.writes}
+    assert methods == {"POST"}
+    assert any(p.endswith("/pulls") for _, p in ctx.writes)
+
+
+def test_sync_noop_when_in_sync(tmp_path):
+    from housekeeper.captain import sync_member_config
+
+    _, desired = _stylelint_mc(tmp_path)
+    ctx = SyncCtx(contents={".stylelintrc.json": '{"extends": "fleet"}\n'})
+    assert sync_member_config(ctx, "stylelint", desired, assume_yes=True) == "in sync"
+    assert ctx.writes == []
+
+
+def test_sync_skips_when_branch_already_current(tmp_path):
+    from housekeeper.captain import sync_member_config
+
+    _, desired = _stylelint_mc(tmp_path)
+    entries = [
+        {"path": p, "mode": "100644", "type": "blob", "content": c}
+        for p, c in sorted(desired.items())
+    ]
+    ctx = SyncCtx(
+        contents={".stylelintrc.json": "{}\n"},
+        branch_tree=_tree_sha("T_main", entries),
+        open_pr=True,
+    )
+    outcome = sync_member_config(ctx, "stylelint", desired, assume_yes=True)
+    assert outcome == "sync PR already up to date"
+    assert ctx.writes == []  # no new commit/ref churn
+
+
+def test_sync_updates_open_pr_when_content_moves(tmp_path):
+    from housekeeper.captain import sync_member_config
+
+    _, desired = _stylelint_mc(tmp_path)
+    ctx = SyncCtx(
+        contents={".stylelintrc.json": "{}\n"},
+        branch_tree="tree:stale",  # an existing PR built from older canonical
+        open_pr=True,
+    )
+    outcome = sync_member_config(ctx, "stylelint", desired, assume_yes=True)
+    assert outcome == "sync PR updated"
+    assert ("PATCH", "repos/o/r/git/refs/heads/housekeeping/fleet-config-stylelint") in [
+        (m, p) for m, p in ctx.writes
+    ]
+
+
+def test_sync_respects_confirmation(tmp_path):
+    from housekeeper.captain import sync_member_config
+
+    _, desired = _stylelint_mc(tmp_path)
+    ctx = SyncCtx(contents={".stylelintrc.json": "{}\n"})
+    outcome = sync_member_config(
+        ctx, "stylelint", desired, assume_yes=False, confirm_fn=lambda _: False
+    )
+    assert outcome == "skipped"
+    assert ctx.writes == []
 
 
 def test_policy_silence_and_agreement_are_fine():

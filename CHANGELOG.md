@@ -2,6 +2,28 @@
 
 Notable changes to housekeeping, newest first.
 
+## Unreleased
+
+- `stylelint` check (recommended): if a repo has stylesheets (`.css`/`.scss`/
+  `.less`) or an existing stylelint config, a config must be present and
+  stylelint must run in CI; skips when there's no CSS to lint. Fixable:
+  scaffolds `.stylelintrc.json` + a workflow.
+- `vale` check (recommended): a `.vale.ini` (with a resolvable `StylesPath`) is
+  present and vale runs in CI. Overlaps with `straitjacket` by design —
+  straitjacket scans for slop, vale enforces house style and terminology.
+  Fixable: scaffolds `.vale.ini` + `styles/` + a workflow.
+- Managed configs: the fleet captain can now **own** a check's config and push
+  it outward. `[[policy.managed-config]]` entries in `housecaptain.toml` point
+  a member destination at a canonical source under `.fleet/` in the captain
+  repo. `housekeeper captain --sync-configs` (action input `sync-configs`)
+  opens an isolated, config-only PR on each member whose copy has drifted —
+  branch `housekeeping/fleet-config-<check>`, reused idempotently. Distribution
+  is deliberately *not* a fix: the captain ships the artifact for the member to
+  adopt at their own pace and never touches member code. Drift is surfaced on
+  the captain report as an informational note, never a member-CI failure. Pair
+  with an `on.push` path filter for `.fleet/**` so a config change fans out on
+  merge.
+
 ## v0.14.0 — 2026-07-05
 
 - `stray-todos` check (recommended): the `TODO` / `TBD` / `FIXME` / `WIP` markers

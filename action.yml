@@ -27,6 +27,14 @@ inputs:
       reach the fleet immediately instead of waiting for weekly crons.
       Requires a token with actions:write on the members.
     default: ""
+  sync-configs:
+    description: >-
+      With captain: push fleet-owned managed configs (stylelint, vale, …) to
+      members as isolated PRs when they drift from the canonical copies under
+      .fleet/. Requires a token with contents:write + pull_requests:write on
+      the members. Pair with an on.push path filter for .fleet/** so a config
+      change fans out on merge.
+    default: ""
 
 runs:
   using: composite
@@ -38,11 +46,13 @@ runs:
         ONLY: ${{ inputs.only }}
         CAPTAIN: ${{ inputs.captain }}
         DISPATCH: ${{ inputs.dispatch }}
+        SYNC_CONFIGS: ${{ inputs.sync-configs }}
       run: |
-        if [ -n "$CAPTAIN" ] && [ "$DISPATCH" = "true" ]; then
-          uvx --from "${{ github.action_path }}" housekeeper captain "$CAPTAIN" --dispatch
-        elif [ -n "$CAPTAIN" ]; then
-          uvx --from "${{ github.action_path }}" housekeeper captain "$CAPTAIN"
+        if [ -n "$CAPTAIN" ]; then
+          args=()
+          [ "$DISPATCH" = "true" ] && args+=(--dispatch)
+          [ "$SYNC_CONFIGS" = "true" ] && args+=(--sync-configs --yes)
+          uvx --from "${{ github.action_path }}" housekeeper captain "$CAPTAIN" "${args[@]}"
         elif [ -n "$ONLY" ]; then
           uvx --from "${{ github.action_path }}" housekeeper check --only "$ONLY"
         else

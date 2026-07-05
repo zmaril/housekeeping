@@ -193,6 +193,7 @@ def cmd_captain(args) -> int:
     from .captain import MemberReport, captain_member, dispatch_self_audit
 
     manifest = load_manifest_or_exit(args.manifest)
+    manifest_dir = Path(args.manifest or "housecaptain.toml").parent
     bad_policy = bool(manifest.unknown_policy)
     if bad_policy:
         console.print(
@@ -222,6 +223,8 @@ def cmd_captain(args) -> int:
                 manifest.required_files,
                 manifest.locked,
                 manifest.captain,
+                manifest.managed_configs,
+                manifest_dir,
             )
         except GhError as e:
             report = MemberReport(member.repo, "error", f"api error: {e}")
@@ -259,6 +262,18 @@ def cmd_captain(args) -> int:
             outcome = dispatch_self_audit(contexts[report.repo], report.workflow_path)
             console.print(f"[dim]{report.repo}: {outcome}[/dim]")
             lines.append(f"\ndispatch {report.repo}: {outcome}")
+
+    if getattr(args, "sync_configs", False):
+        from .captain import sync_configs
+        from .fixing import confirm
+
+        # In Actions there's no TTY to confirm at; the workflow opts in via --yes.
+        assume_yes = args.yes or os.environ.get("GITHUB_ACTIONS") == "true"
+        for repo, check, outcome in sync_configs(
+            manifest, manifest_dir, assume_yes, confirm
+        ):
+            console.print(f"[dim]sync {repo} {check}: {outcome}[/dim]")
+            lines.append(f"\nsync {repo} {check}: {outcome}")
 
     summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary_path:
@@ -420,6 +435,17 @@ def main() -> None:
         "--dispatch",
         action="store_true",
         help="also trigger every member's self-audit now",
+    )
+    p_captain.add_argument(
+        "--sync-configs",
+        action="store_true",
+        dest="sync_configs",
+        help="push fleet-owned managed configs to members as isolated PRs",
+    )
+    p_captain.add_argument(
+        "--yes",
+        action="store_true",
+        help="skip the per-member confirmation on --sync-configs (for CI)",
     )
     p_captain.set_defaults(func=cmd_captain)
 
