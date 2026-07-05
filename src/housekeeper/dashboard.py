@@ -30,6 +30,9 @@ LEGEND = [
     ("off", "· off / n-a"),
 ]
 
+# metadata rows (version text, not a status glyph): which shared-CI ref each repo pins.
+CI_ROWS = [("housekeeping", "housekeeping CI"), ("straitjacket", "straitjacket CI")]
+
 
 def logo_url(repo: str, logo: str) -> str:
     """An image URL for the repo: a full URL as-is, else a repo-relative path resolved
@@ -81,9 +84,28 @@ def render_matrix(
     live = [p for p in payloads if p]
     checks = _rows(live)
 
-    head = '<th class="corner"></th>' + "".join(
-        _repo_header(m, p) for m, p in zip(members, payloads)
-    )
+    repo_cells = [_repo_header(m, p) for m, p in zip(members, payloads)]
+    head = '<th class="corner"></th>' + "".join(repo_cells)
+    foot = '<th class="corner"></th>' + "".join(repo_cells)
+
+    # version metadata rows: which shared-CI ref each repo pins.
+    meta_rows = []
+    for i, (key, label) in enumerate(CI_ROWS):
+        cells = []
+        for payload in payloads:
+            ver = (
+                "–"
+                if payload is None
+                else (payload.get("ci_versions", {}).get(key) or "–")
+            )
+            cells.append(
+                f'<td class="ver" title="{html.escape(label)}: {html.escape(ver)}">{html.escape(ver)}</td>'
+            )
+        cls = "meta last" if i == len(CI_ROWS) - 1 else "meta"
+        meta_rows.append(
+            f'<tr class="{cls}"><th class="check">{html.escape(label)}</th>{"".join(cells)}</tr>'
+        )
+
     # one lookup per column (member); None marks an unreachable repo.
     columns = [{r["check"]: r for r in p["results"]} if p else None for p in payloads]
 
@@ -115,7 +137,9 @@ def render_matrix(
         now=html.escape(now),
         legend=legend,
         head=head,
+        meta="\n".join(meta_rows),
         body="\n".join(body_rows),
+        foot=foot,
     )
 
 
@@ -140,8 +164,10 @@ _PAGE = """\
 <table>
 <thead><tr>{head}</tr></thead>
 <tbody>
+{meta}
 {body}
 </tbody>
+<tfoot><tr>{foot}</tr></tfoot>
 </table>
 </div>
 <style>
@@ -162,12 +188,17 @@ td {{ width: 2rem; height: 2rem; text-align: center; font-weight: 700; }}
 td.ok {{ color: var(--ok); }} td.warn {{ color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent); }}
 td.bad {{ color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, transparent); }}
 td.skip, td.off {{ color: var(--skip); }}
-thead th.repo {{ background: var(--head); vertical-align: bottom; height: 7rem; padding: .5rem .3rem; }}
-thead th.repo a {{ display: flex; flex-direction: column; align-items: center; gap: .4rem; color: inherit; text-decoration: none; }}
-thead th.repo img {{ width: 22px; height: 22px; border-radius: 4px; object-fit: contain; }}
-thead th.repo span {{ writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; font-weight: 500; }}
-thead th.repo.bad span {{ color: var(--bad); }}
+th.repo {{ background: var(--head); height: 7rem; padding: .5rem .3rem; }}
+thead th.repo {{ vertical-align: bottom; }}
+tfoot th.repo {{ vertical-align: top; }}
+th.repo a {{ display: flex; flex-direction: column; align-items: center; gap: .4rem; color: inherit; text-decoration: none; }}
+th.repo img {{ width: 22px; height: 22px; border-radius: 4px; object-fit: contain; }}
+th.repo span {{ writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; font-weight: 500; }}
+th.repo.bad span {{ color: var(--bad); }}
 th.corner {{ background: var(--head); position: sticky; left: 0; z-index: 1; }}
-tbody th.check {{ background: var(--head); text-align: left; padding: .3rem .8rem; position: sticky; left: 0; white-space: nowrap; font-weight: 500; }}
+th.check {{ background: var(--head); text-align: left; padding: .3rem .8rem; position: sticky; left: 0; white-space: nowrap; font-weight: 500; }}
+tr.meta td.ver {{ background: var(--head); font: 600 11px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--fg); white-space: nowrap; text-align: center; padding: 0 .45rem; }}
+tr.meta th.check {{ font-style: italic; font-weight: 500; }}
+tr.last td, tr.last th {{ border-bottom: 2px solid var(--skip); }}
 </style>
 """

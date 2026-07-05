@@ -96,10 +96,13 @@ def audit(repo: str, only: str | None = None) -> dict:
             }
         )
 
+    from .ci_versions import ci_versions, read_workflows
+
     payload = {
         "repo": repo,
         "visibility": visibility,
         "logo": ctx.config.logo,
+        "ci_versions": ci_versions(repo, read_workflows(getattr(ctx, "workdir", None))),
         "checked_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "results": rows,
     }
