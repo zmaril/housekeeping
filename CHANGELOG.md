@@ -2,7 +2,7 @@
 
 Notable changes to housekeeping, newest first.
 
-## Unreleased
+## v0.15.0 — 2026-07-05
 
 - `stylelint` check (recommended): if a repo has stylesheets (`.css`/`.scss`/
   `.less`) or an existing stylelint config, a config must be present and
