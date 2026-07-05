@@ -29,6 +29,11 @@ Notable changes to housekeeping, newest first.
   the captain report as an informational note, never a member-CI failure. Pair
   with an `on.push` path filter for `.fleet/**` so a config change fans out on
   merge.
+- `stray-todos` fix: tighten the marker match so it no longer flags an enum/object
+  key named `Todo:` or the word "todo" used mid-sentence in prose. A marker must sit
+  right after a comment leader, be a heading, or be the first token on a line. Found
+  the day it shipped, when the freshly-enforced check fired on powdermonkey's
+  `PhaseStatus` enum.
 
 ## v0.14.0 — 2026-07-05
 

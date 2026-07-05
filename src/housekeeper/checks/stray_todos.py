@@ -5,7 +5,7 @@ invisible until someone stumbles on it a year later. The policy: those markers l
 in ONE file, the same todo pile `stray-files` points at (default `todo.txt`), where
 they can actually be triaged. Anywhere else in the tree, they're flagged.
 
-Marker *form* is matched (`TODO:`, `FIXME(`, a `## TODO` heading) in either case — the
+Marker *form* is matched (`TODO:`, `FIXME(`, or a heading tag) in either case — the
 word "todo" used in prose ("the todo file") is deliberately left alone. Only tracked
 files are scanned. Deliberate keepers go in `.housekeeping.toml`:
 `[stray-todos] ignore = ["tests/", ...]`.
@@ -22,12 +22,13 @@ from pathlib import Path
 from ..context import RepoContext, run
 from ..registry import check, failed, passed
 
-# A marker in *tag position* — `TODO:` / `FIXME(` / `wip:` — or a heading that leads
-# with the marker (`## TODO`). Case-insensitive. The bare word in prose ("the todo
-# file", "a todo pile") has no `:`/`(` and isn't a heading, so it's not matched.
+# A marker is the tag right after a comment leader (slash-slash, hash, star, or an
+# html-comment opener), a markdown heading, or the first token on a line. Case-
+# insensitive. Requiring that leading context is what separates a marker from an
+# enum key (`{ Todo: "todo" }`) or the word used mid-sentence in prose — neither of
+# which is a real note. The alternation below lists those leaders.
 MARKER = re.compile(
-    r"\b(?:TODO|TBD|FIXME|WIP)\b\s*[:(]"
-    r"|^[ \t]*#{1,6}[ \t]+(?:TODO|TBD|FIXME|WIP)\b",
+    r"(?:^|//|/\*|\*|<!--|\#|;|--)[ \t]*(?:TODO|TBD|FIXME|WIP)\b",
     re.IGNORECASE | re.MULTILINE,
 )
 

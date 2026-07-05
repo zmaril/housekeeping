@@ -64,6 +64,25 @@ def test_identifier_lookalikes_not_matched(tmp_path):
     assert stray_todos(ctx).status == Status.PASS
 
 
+def test_enum_key_named_todo_is_not_a_marker(tmp_path):
+    # An object/enum key `Todo:` is a value, not a note-to-self. (Real case: a
+    # powdermonkey PhaseStatus = { Todo: "todo", Done: "done" }.)
+    ctx = ctx_for(
+        tmp_path,
+        {"types.ts": 'const PhaseStatus = { Todo: "todo", Done: "done" };\n'},
+    )
+    assert stray_todos(ctx).status == Status.PASS
+
+
+def test_prose_todo_before_a_paren_is_not_a_marker(tmp_path):
+    # "still todo (only a...)" is the word in a sentence, not a `TODO(` tag.
+    ctx = ctx_for(
+        tmp_path,
+        {"t.ts": "// phase a done, phase b still todo (only a was trailered)\n"},
+    )
+    assert stray_todos(ctx).status == Status.PASS
+
+
 def test_untracked_files_are_not_scanned(tmp_path):
     (tmp_path / "src").mkdir()
     (tmp_path / "src" / "tracked.py").write_text("ok = 1\n")
