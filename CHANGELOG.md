@@ -2,6 +2,16 @@
 
 Notable changes to housekeeping, newest first.
 
+## v0.14.0 — 2026-07-05
+
+- `stray-todos` check (recommended): the `TODO` / `TBD` / `FIXME` / `WIP` markers
+  belong in one todo file (the same pile `stray-files` points at, default
+  `todo.txt`), not scattered through comments and docs where nobody tracks them. It
+  flags the marker *form* — the tag with a trailing colon or paren, or a heading
+  that opens with it — in either case, over git-tracked files only; the word "todo"
+  used in prose is left alone. Deliberate keepers via `[stray-todos] ignore = [...]`.
+  Enforced as required across the powderworks fleet.
+
 ## v0.13.0 — 2026-07-04
 
 - **Re-baselined to 0.x.** Housekeeping had jumped to `v1.x` while it's still

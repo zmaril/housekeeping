@@ -20,6 +20,7 @@ from . import (  # noqa: F401
     gitignore,
     codeowners,
     stray_files,
+    stray_todos,
     conventional_commits,
     straitjacket,
     readme,

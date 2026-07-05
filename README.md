@@ -7,7 +7,8 @@ and lint, no CI step masking its own failure with `continue-on-error`, a
 scheduled run so bitrot surfaces on its own, bounded job timeouts, no
 rerun-until-green test retries, a pinned (non-floating) CI toolchain, dependabot
 coverage, secret scanning, read-only workflow tokens, lockfiles committed and in
-sync, gitignore coverage, CODEOWNERS routing review,
+sync, gitignore coverage, CODEOWNERS routing review, TODO/FIXME markers kept in
+the todo file rather than scattered,
 [straitjacket](https://github.com/zmaril/Straitjacket) wired into CI, a README
 that clears the floor, a reachable website, a license, sane repo metadata, and
 no stale PRs or branches. One repo at a time; run it when you

@@ -29,6 +29,7 @@ DEFAULT_SEVERITY = {
     "gitignore": "recommended",
     "codeowners": "recommended",
     "stray-files": "recommended",
+    "stray-todos": "recommended",
     "conventional-commits": "recommended",
     "straitjacket": "required",
     "readme": "required",
