@@ -7,6 +7,8 @@ website = "off"
 conventional-commits = "required"  # adopted 2026-07-04; default is recommended
 
 # Test fixtures deliberately embed marker-like strings (a commented placeholder,
-# a bad commit prefix) to exercise other checks — not real todos to corral.
+# a bad commit prefix) to exercise other checks — not real todos to corral. The
+# stray-todos module also documents the marker tags it matches, so it trips
+# itself — ignore its own definition file too.
 [stray-todos]
-ignore = ["tests/"]
+ignore = ["tests/", "src/housekeeper/checks/stray_todos.py"]

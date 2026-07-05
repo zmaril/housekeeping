@@ -158,6 +158,9 @@ non-skipped check failed.
 | `stale` | API | No PRs idle >30 days; no merged-but-undeleted branches; `delete_branch_on_merge` enabled | Enable the setting; delete merged branches (confirm each) |
 | `stray-files` | clone | One todo pile (default `todo.txt`), notes corralled in one directory (default `notes/`), conventional community files at root, nothing else; all paths configurable, keepers via `[stray-files] allow` | none — needs judgment |
 | `conventional-commits` | clone + API | Enforced in CI (PR-title check or commitlint) and mentioned in README/CONTRIBUTING; recent default-branch adherence reported as a note, never judged retroactively | Set squash-title-from-PR-title; add the PR-title workflow |
+| `stylelint` | clone | If the repo has stylesheets (`.css`/`.scss`/`.less`) or an existing stylelint config, a config is present **and** stylelint runs in CI; skip when there are no stylesheets | Scaffold `.stylelintrc.json` + a CI step |
+| `vale` | clone | A `.vale.ini` (with its `StylesPath`) is present **and** vale runs in CI. Overlaps with `straitjacket` by design — straitjacket scans for slop, vale enforces house style and terminology; wiring only, findings are vale's own business | Scaffold `.vale.ini` + `styles/` + a CI step |
+| `codespell` | clone | codespell runs in CI. The fleet's spell checker, split from vale on purpose: vale's dictionary spell-check false-positives on every unknown jargon word, so vale does style/terms and codespell does spelling — it flags only *known* misspellings, so it can't cry wolf on a term it's never seen. Wiring only | Scaffold `.codespellrc` + a CI step |
 
 Ecosystem detection lives once in `context.py` (look for `Cargo.toml`,
 `package.json` + which lockfile, `pyproject.toml`, `go.mod`,
@@ -203,6 +206,67 @@ repo's own) from main, not from the proposing PR — merge it red and trust
 the post-merge run. `housekeeper fleet` is the deep local audit
 over the same manifest. Captain-driven fixes deliberately don't exist;
 fixing stays one-repo and interactive.
+
+### Managed configs
+
+Some checks pass on *presence* (a stylelint config exists, a `.vale.ini`
+exists) but the *content* of that config is a fleet-wide decision — everyone
+should lint CSS by the same rules, spell-check against the same vocabulary.
+Rather than copy-paste the file into every repo and let the copies rot, the
+captain **owns** the canonical config and pushes it outward.
+
+Canonical files live in the captain repo under `.fleet/` (dot-prefixed so it
+reads as a tool directory, like `.github/`), declared in `housecaptain.toml`:
+
+```toml
+[[policy.managed-config]]
+check  = "stylelint"
+scope  = "all"                        # all | public | private
+paths  = { ".stylelintrc.json" = ".fleet/stylelintrc.json" }  # member path -> captain source
+
+[[policy.managed-config]]
+check = "vale"
+paths = { ".vale.ini" = ".fleet/vale/.vale.ini", "styles/" = ".fleet/vale/styles/" }
+```
+
+A trailing-slash key is a directory sync (vale's whole vocab tree); a plain
+key is a single file. Every `source` must live under `.fleet/` — `load_manifest`
+rejects the manifest otherwise, so the merge trigger below stays honest.
+
+**Distribution is a push, not a fix.** This is a deliberate exception to
+"captain-driven fixes don't exist," and the line is exact: the captain ships
+the config *artifact* as its own isolated, reviewable PR on each member
+(branch `housekeeping/fleet-config-<check>`, touching only the managed files,
+titled `chore(config): sync <check> config from fleet`). It **never** touches
+member code and never tries to make the resulting lint pass — merging the PR,
+and cleaning up whatever new violations it surfaces, stays the member's own
+one-repo, interactive job. The point is that a rules bump arrives as a
+dedicated PR the member adopts at their own pace, instead of ambushing an
+unrelated feature PR with a wall of new findings.
+
+`housekeeper captain --sync-configs` performs the distribution: per member ×
+managed-config in scope, it compares the member's current file(s) against the
+captain's canonical copy and opens (or updates, idempotently) a sync PR only
+where they differ. It needs a token with `contents:write` +
+`pull_requests:write` on the members (a fleet PAT), where the read-only
+captain check needs none of that.
+
+**Trigger.** The captain repo carries `.github/workflows/fleet-sync.yml`:
+`on: push` to `main` filtered by `paths: ['.fleet/**']`, so a merge that
+changes a canonical config fans the update out to the fleet immediately; plus
+a weekly `schedule` backstop (new members, sync PRs closed unmerged) and
+`workflow_dispatch`. A `concurrency` group plus the command's idempotency keep
+overlapping merges from opening duplicate PRs. No loop risk: sync PRs write
+member paths (`.stylelintrc.json`, `styles/`), never `.fleet/**`, so even the
+captain-as-its-own-member case can't re-fire the filter.
+
+**On the member side, drift is not a failure.** The `stylelint`/`vale` checks
+a member runs enforce only the standalone contract (config present + wired
+into CI); they never compare content against fleet canonical, so a member
+whose config lags behind an unmerged sync PR keeps a green self-audit. Content
+canonicity is the captain's concern alone — surfaced on the captain output and
+fleet dashboard as `in sync` / `sync PR open` / `stale`, never as a member-CI
+red. That is what makes "adopt at your own pace" real.
 
 ## Skills layer
 

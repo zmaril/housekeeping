@@ -9,10 +9,10 @@ rerun-until-green test retries, a pinned (non-floating) CI toolchain, dependabot
 coverage, secret scanning, read-only workflow tokens, lockfiles committed and in
 sync, gitignore coverage, CODEOWNERS routing review, TODO/FIXME markers kept in
 the todo file rather than scattered,
-[straitjacket](https://github.com/zmaril/Straitjacket) wired into CI, a README
-that clears the floor, a reachable website, a license, sane repo metadata, and
-no stale PRs or branches. One repo at a time; run it when you
-touch a repo.
+[straitjacket](https://github.com/zmaril/Straitjacket) wired into CI, stylelint
+on stylesheets, vale on prose style and codespell on typos, a README that clears
+the floor, a reachable website, a license, sane repo metadata, and no stale PRs
+or branches. One repo at a time; run it when you touch a repo.
 
 Checking is always read-only. Fixing is separate, explains itself, and asks
 before changing anything; file fixes land on a `housekeeping/<check>` branch
@@ -123,6 +123,58 @@ audit against every member from your machine, with a scoreboard. And
 `housekeeper captain --dispatch` (action input `dispatch: true`) is the
 fleet's "now" button: it triggers every member's self-audit immediately, so
 a new check reaches everyone without waiting out the weekly crons.
+
+#### Managed configs
+
+Some checks pass on presence but the config's *content* is a fleet decision —
+everyone should lint CSS by the same rules and spell-check against the same
+vocabulary. The captain can own the canonical file and push it outward.
+Canonical configs live under `.fleet/` in the captain repo, declared in the
+manifest:
+
+```toml
+[[policy.managed-config]]
+check = "stylelint"
+paths = { ".stylelintrc.json" = ".fleet/stylelintrc.json" }
+
+[[policy.managed-config]]
+check = "vale"                     # trailing-slash keys are directory syncs
+paths = { ".vale.ini" = ".fleet/vale/.vale.ini", "styles/" = ".fleet/vale/styles/" }
+```
+
+`housekeeper captain --sync-configs` (action input `sync-configs: true`) opens
+an isolated, config-only PR on each member whose copy has drifted — branch
+`housekeeping/fleet-config-<check>`, reused idempotently, titled `chore(config):
+sync <check> config from fleet`. This is distribution, not a fix: the captain
+ships the artifact for the member to adopt at their own pace and **never**
+touches member code or tries to make the resulting lint pass — that stays the
+member's own, one-repo job. Drift shows on the captain report as a note, never
+as a member-CI failure. It needs a token with `contents:write` +
+`pull_requests:write` on the members.
+
+Wire it to fan out on merge with a workflow in the captain repo:
+
+```yaml
+name: fleet-sync
+on:
+  push:
+    branches: [main]
+    paths: ['.fleet/**']          # only when a canonical config changes
+  schedule:
+    - cron: "0 7 * * 1"           # backstop: new members, PRs closed unmerged
+  workflow_dispatch:
+concurrency: { group: fleet-sync }
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: zmaril/housekeeping@v0.9.0   # pin the full version
+        with:
+          captain: housecaptain.toml
+          sync-configs: true
+          token: ${{ secrets.FLEET_PAT }}
+```
 
 ### Agent skill
 
