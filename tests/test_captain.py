@@ -506,9 +506,10 @@ def test_sync_updates_open_pr_when_content_moves(tmp_path):
     )
     outcome = sync_member_config(ctx, "stylelint", desired, assume_yes=True)
     assert outcome == "sync PR updated"
-    assert ("PATCH", "repos/o/r/git/refs/heads/housekeeping/fleet-config-stylelint") in [
-        (m, p) for m, p in ctx.writes
-    ]
+    assert (
+        "PATCH",
+        "repos/o/r/git/refs/heads/housekeeping/fleet-config-stylelint",
+    ) in [(m, p) for m, p in ctx.writes]
 
 
 def test_sync_respects_confirmation(tmp_path):

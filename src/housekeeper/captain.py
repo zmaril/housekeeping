@@ -333,7 +333,9 @@ def captain_member(
 
     def finish(report: MemberReport) -> MemberReport:
         if managed_note:
-            report.note = f"{report.note}; {managed_note}" if report.note else managed_note
+            report.note = (
+                f"{report.note}; {managed_note}" if report.note else managed_note
+            )
         return report
 
     found = find_housekeeping_workflow(ctx)
@@ -405,9 +407,7 @@ def _head_tree(ctx: RepoContext) -> tuple[str, str]:
 
 def _branch_tree(ctx: RepoContext, branch: str) -> str | None:
     """Tree sha of a branch's tip, or None if the branch doesn't exist."""
-    ref = ctx.try_api(
-        f"repos/{ctx.repo}/git/ref/heads/{branch}", none_on=(404, 422)
-    )
+    ref = ctx.try_api(f"repos/{ctx.repo}/git/ref/heads/{branch}", none_on=(404, 422))
     if not ref:
         return None
     commit = ctx.api(f"repos/{ctx.repo}/git/commits/{ref['object']['sha']}")
@@ -486,7 +486,12 @@ def sync_member_config(
     ctx.api(
         f"repos/{ctx.repo}/pulls",
         method="POST",
-        input={"title": title, "head": branch, "base": ctx.default_branch, "body": body},
+        input={
+            "title": title,
+            "head": branch,
+            "base": ctx.default_branch,
+            "body": body,
+        },
     )
     return "sync PR opened"
 
@@ -509,7 +514,9 @@ def sync_configs(
         for mc in manifest.managed_configs:
             try:
                 if mc.scope != "all" and ctx.visibility != mc.scope:
-                    results.append((member.repo, mc.check, f"skipped ({mc.scope}-only)"))
+                    results.append(
+                        (member.repo, mc.check, f"skipped ({mc.scope}-only)")
+                    )
                     continue
                 desired = expand_managed_config(manifest_dir, mc)
                 outcome = sync_member_config(
