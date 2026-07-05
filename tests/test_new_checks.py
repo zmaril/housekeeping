@@ -3,7 +3,7 @@ from types import SimpleNamespace
 from housekeeper.checks.gitignore import gitignore
 from housekeeper.checks.secret_scanning import secret_scanning
 from housekeeper.checks.workflow_permissions import workflow_permissions
-from housekeeper.context import Ecosystem
+from housekeeper.languages import ECOSYSTEMS
 from housekeeper.registry import Status
 
 
@@ -72,7 +72,7 @@ def test_workflow_permissions_pass_and_fail():
 def cargo_ctx(tmp_path):
     return SimpleNamespace(
         workdir=tmp_path,
-        ecosystems=[Ecosystem("cargo", "Cargo.toml", "Cargo.lock", "cargo")],
+        ecosystems=[ECOSYSTEMS["cargo"]],
     )
 
 
@@ -93,7 +93,5 @@ def test_gitignore_covered_passes(tmp_path):
 
 
 def test_gitignore_no_known_junk_skips(tmp_path):
-    ctx = SimpleNamespace(
-        workdir=tmp_path, ecosystems=[Ecosystem("go", "go.mod", "go.sum", "gomod")]
-    )
+    ctx = SimpleNamespace(workdir=tmp_path, ecosystems=[ECOSYSTEMS["go"]])
     assert gitignore(ctx).status == Status.SKIP

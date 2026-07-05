@@ -18,51 +18,14 @@ import yaml
 
 from ..context import RepoContext
 from ..fixing import apply_file_fix
+from ..languages import LANGUAGES
 from ..registry import check, failed, fix_for, passed, skipped
 
 PACKAGE_SCRIPT = re.compile(r"\b(?:bun|npm|pnpm|yarn) run ([\w:.-]+)")
 
-LANGUAGE_OF = {
-    "cargo": "rust",
-    "bun": "js",
-    "npm": "js",
-    "pnpm": "js",
-    "yarn": "js",
-    "uv": "python",
-    "pip": "python",
-    "ruby": "ruby",
-    "go": "go",
-}
-
-LANG_SIGNALS: dict[str, dict[str, re.Pattern]] = {
-    "rust": {
-        "test": re.compile(r"\bcargo (nextest|test)\b"),
-        "lint": re.compile(r"\bclippy\b"),
-        "fmt": re.compile(r"\b(cargo fmt|rustfmt)\b"),
-    },
-    "js": {
-        "test": re.compile(
-            r"\b(bun test|npm test|pnpm test|yarn test|vitest|jest|playwright)\b"
-        ),
-        "lint": re.compile(r"\b(eslint|oxlint|biome (check|lint|ci))\b"),
-        "fmt": re.compile(r"\b(prettier|dprint|biome (check|format|ci))\b"),
-    },
-    "python": {
-        "test": re.compile(r"\b(pytest|python -m unittest|tox)\b"),
-        "lint": re.compile(r"\b(ruff check|flake8|pylint)\b"),
-        "fmt": re.compile(r"\b(ruff format|black)\b"),
-    },
-    "ruby": {
-        "test": re.compile(r"\b(rspec|rake (test|spec)|minitest)\b"),
-        "lint": re.compile(r"\b(rubocop|standardrb)\b"),
-        "fmt": re.compile(r"\b(rubocop|standardrb)\b"),
-    },
-    "go": {
-        "test": re.compile(r"\bgo test\b"),
-        "lint": re.compile(r"\b(go vet|golangci-lint|staticcheck)\b"),
-        "fmt": re.compile(r"\b(gofmt|gofumpt)\b"),
-    },
-}
+# Test/lint/fmt signals and CI templates now live in languages.py — a check reads
+# `eco.language` / `LANGUAGES[...]` / `eco.ci_template` instead of a table here.
+SIGNAL_NAMES = ("test", "lint", "fmt")
 
 
 def workflow_files(workdir: Path) -> list[Path]:
@@ -168,12 +131,11 @@ def ci_exists(ctx: RepoContext):
     if not triggered:
         problems.append("no workflow triggers on push/pull_request")
 
-    languages = sorted(
-        {LANGUAGE_OF[e.name] for e in ctx.ecosystems if e.name in LANGUAGE_OF}
-    )
+    languages = sorted({e.language for e in ctx.ecosystems if e.language})
     for lang in languages:
-        for signal, pattern in LANG_SIGNALS[lang].items():
-            if not pattern.search(commands):
+        language = LANGUAGES[lang]
+        for signal in SIGNAL_NAMES:
+            if not getattr(language, signal).search(commands):
                 problems.append(f"{lang}: no {signal} step")
     if problems:
         return failed("; ".join(problems))
@@ -185,56 +147,10 @@ def ci_exists(ctx: RepoContext):
     return passed(f"test + lint + fmt in CI for every language: {', '.join(languages)}")
 
 
-CI_TEMPLATES = {
-    "cargo": (
-        "  test:\n    runs-on: ubuntu-latest\n    steps:\n"
-        "      - uses: actions/checkout@v4\n"
-        "      - uses: dtolnay/rust-toolchain@stable\n"
-        "        with: {components: 'clippy, rustfmt'}\n"
-        "      - run: cargo fmt --check\n"
-        "      - run: cargo clippy -- -D warnings\n"
-        "      - run: cargo test\n"
-    ),
-    "bun": (
-        "  test:\n    runs-on: ubuntu-latest\n    steps:\n"
-        "      - uses: actions/checkout@v4\n"
-        "      - uses: oven-sh/setup-bun@v2\n"
-        "      - run: bun install --frozen-lockfile\n"
-        "      - run: bun run lint\n"
-        "      - run: bun test\n"
-    ),
-    "uv": (
-        "  test:\n    runs-on: ubuntu-latest\n    steps:\n"
-        "      - uses: actions/checkout@v4\n"
-        "      - uses: astral-sh/setup-uv@v5\n"
-        "      - run: uv sync\n"
-        "      - run: uv run ruff check .\n"
-        "      - run: uv run ruff format --check .\n"
-        "      - run: uv run pytest\n"
-    ),
-    "ruby": (
-        "  ruby:\n    runs-on: ubuntu-latest\n    steps:\n"
-        "      - uses: actions/checkout@v4\n"
-        "      - uses: ruby/setup-ruby@v1\n"
-        "        with: {bundler-cache: true}\n"
-        "      - run: bundle exec rubocop\n"
-        "      - run: bundle exec rake test\n"
-    ),
-    "go": (
-        "  test:\n    runs-on: ubuntu-latest\n    steps:\n"
-        "      - uses: actions/checkout@v4\n"
-        "      - uses: actions/setup-go@v5\n"
-        '      - run: gofmt -l . && test -z "$(gofmt -l .)"\n'
-        "      - run: go vet ./...\n"
-        "      - run: go test ./...\n"
-    ),
-}
-
-
 @fix_for("ci-exists")
 def fix(ctx: RepoContext):
-    jobs = [CI_TEMPLATES[e.name] for e in ctx.ecosystems if e.name in CI_TEMPLATES]
-    if not jobs:
+    templated = [e for e in ctx.ecosystems if e.ci_template]
+    if not templated:
         from ..fixing import console
 
         console.print(
@@ -243,7 +159,7 @@ def fix(ctx: RepoContext):
         return
     content = (
         "name: ci\non:\n  push:\n    branches: [main]\n  pull_request:\n\njobs:\n"
-        + "\n".join(jobs)
+        + "\n".join(e.ci_template for e in templated)
     )
 
     def write(workdir: Path) -> list[Path]:
@@ -256,7 +172,7 @@ def fix(ctx: RepoContext):
         ctx,
         "ci-exists",
         describe="scaffold .github/workflows/ci.yml with test + lint jobs "
-        f"for: {', '.join(e.name for e in ctx.ecosystems if e.name in CI_TEMPLATES)}",
+        f"for: {', '.join(e.name for e in templated)}",
         why="without CI, broken code merges silently — a push/PR workflow catches "
         "failures before they land on main, and gives branch protection status "
         "checks to require",

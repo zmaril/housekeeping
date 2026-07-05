@@ -42,11 +42,11 @@ def test_dependabot_unknown_settings_pass_with_note(tmp_path):
         'version: 2\nupdates:\n  - package-ecosystem: "cargo"\n'
         '    directory: "/"\n    schedule: {interval: "weekly"}\n'
     )
-    from housekeeper.context import Ecosystem
+    from housekeeper.languages import ECOSYSTEMS
 
     ctx = ForbiddenApiCtx(
         workdir=tmp_path,
-        ecosystems=[Ecosystem("cargo", "Cargo.toml", "Cargo.lock", "cargo")],
+        ecosystems=[ECOSYSTEMS["cargo"]],
     )
     result = dependabot(ctx)
     assert result.status == Status.PASS
