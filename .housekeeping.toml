@@ -5,3 +5,8 @@ logo = "assets/duster.svg"  # feather duster, for the fleet dashboard
 [checks]
 website = "off"
 conventional-commits = "required"  # adopted 2026-07-04; default is recommended
+
+# Test fixtures deliberately embed marker-like strings (a commented placeholder,
+# a bad commit prefix) to exercise other checks — not real todos to corral.
+[stray-todos]
+ignore = ["tests/"]
