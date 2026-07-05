@@ -9,5 +9,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - run: curl -fsSL https://raw.githubusercontent.com/zmaril/straitjacket/main/install.sh | sh
-      - run: straitjacket
+      # Pinned, not `main`/latest: a new straitjacket rule shouldn't fail this
+      # repo's CI until we deliberately bump — the same rule we ask consumers to
+      # follow for the housekeeping action.
+      - uses: zmaril/straitjacket@v0.2.3
+        with:
+          version: v0.2.3
+          sarif: "false"
