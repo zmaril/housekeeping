@@ -56,12 +56,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: zmaril/housekeeping@v1
+      - uses: zmaril/housekeeping@v1.12.0   # pin the full version — newest is on the Releases page
 ```
 
-`v1` moves with compatible releases; pin `@v1.0.0` or a commit SHA if you'd
-rather nothing move under you. Results land in the job summary; a
-required-check failure fails the run.
+**Pin the full version, not a moving major tag.** Housekeeping adds checks in
+minor releases; a floating `@v1` would apply every new check to your repo the
+moment it ships, turning an unrelated PR red with something you never opted
+into. Pin the exact release (or a commit SHA) so new checks arrive only when you
+deliberately bump — on a PR that's *about* that upgrade, where you can read the
+[changelog](CHANGELOG.md) and decide. Dependabot/Renovate can raise those bumps
+for you. The newest release is on the
+[Releases page](https://github.com/zmaril/housekeeping/releases). Results land in
+the job summary; a required-check failure fails the run.
 The default workflow token can't read some admin-level settings
 (vulnerability alerts, secret scanning, workflow permissions) — those checks
 skip with a note rather than guessing; pass `with: token:` a fine-grained

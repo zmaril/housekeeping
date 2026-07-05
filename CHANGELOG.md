@@ -2,6 +2,19 @@
 
 Notable changes to housekeeping, newest first.
 
+## v1.13.0 — 2026-07-04
+
+- Docs: the recommended action usage now pins the **full version**
+  (`zmaril/housekeeping@v1.12.0`) instead of the moving `@v1` tag. Housekeeping
+  adds checks in minor releases, and a floating major tag applies them to a
+  consumer's repo the moment they ship — a required check they never opted into,
+  turning an unrelated PR red. Pinning means new checks arrive only on a
+  deliberate bump. Same reasoning as the `reproducible-toolchain` check, applied
+  to our own action.
+- Dogfood: the self-audit's straitjacket step now uses the pinned
+  `zmaril/straitjacket@v0.2.3` action instead of installing from `main`, so a new
+  straitjacket rule can't fail this repo's CI until we choose to bump.
+
 ## v1.11.0 — 2026-07-04
 
 - Internal: per-language / per-ecosystem knowledge is now consolidated in one
