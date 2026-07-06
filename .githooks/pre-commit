@@ -1,0 +1,13 @@
+#!/bin/sh
+# Full local gate — the same checks CI enforces, run before the commit lands so
+# agents catch failures here instead of ping-ponging with remote CI.
+# Bypass with `git commit --no-verify`. Activate with:
+#   git config core.hooksPath .githooks
+set -e
+run() { printf '\n\033[1m▶ %s\033[0m\n' "$*"; "$@"; }
+
+run uv run ruff check .
+run uv run ruff format --check .
+run uv run mypy src/housekeeper
+run uv run pytest
+run ./.githooks/run-straitjacket

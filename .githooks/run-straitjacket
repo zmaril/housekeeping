@@ -1,0 +1,54 @@
+#!/bin/sh
+# Run straitjacket at the SAME version this repo pins in CI, so local results
+# match CI exactly regardless of what's installed globally. The version is read
+# from .github/workflows/straitjacket.yml (single source of truth — bump the
+# workflow and the hook follows). Released binaries are cached per version under
+# $XDG_CACHE_HOME/straitjacket/<version>/ so the download happens once.
+set -e
+
+wf=".github/workflows/straitjacket.yml"
+repo="zmaril/straitjacket"
+
+# Resolve the pinned version: `version:` input, else `@vX.Y.Z` on the uses line,
+# else "latest" (the workflow installs via install.sh with no pin).
+ver=$(sed -n 's/.*version:[[:space:]]*"\{0,1\}\(v[0-9][0-9.]*\)"\{0,1\}.*/\1/p' "$wf" 2>/dev/null | head -n1)
+[ -n "$ver" ] || ver=$(sed -n "s|.*$repo@\(v[0-9][0-9.]*\).*|\1|p" "$wf" 2>/dev/null | head -n1)
+if [ -z "$ver" ]; then
+  # Follow the moving "latest" release to its concrete tag, so the cache key is stable.
+  ver=$(curl -fsSLo /dev/null -w '%{url_effective}' "https://github.com/$repo/releases/latest" \
+        | sed -n 's|.*/tag/\(v[0-9][0-9.]*\).*|\1|p')
+fi
+[ -n "$ver" ] || { echo "run-straitjacket: could not resolve version from $wf" >&2; exit 1; }
+
+cache="${XDG_CACHE_HOME:-$HOME/.cache}/straitjacket/$ver"
+bin="$cache/straitjacket"
+
+if [ ! -x "$bin" ]; then
+  os=$(uname -s); arch=$(uname -m)
+  case "$os" in
+    Darwin) os_part="apple-darwin" ;;
+    Linux)  os_part="unknown-linux-gnu" ;;
+    *) echo "run-straitjacket: unsupported OS '$os'" >&2; exit 1 ;;
+  esac
+  case "$arch" in
+    arm64|aarch64) arch_part="aarch64" ;;
+    x86_64|amd64)  arch_part="x86_64" ;;
+    *) echo "run-straitjacket: unsupported arch '$arch'" >&2; exit 1 ;;
+  esac
+  # The release workflow only builds x86_64 for linux.
+  [ "$os_part" = "unknown-linux-gnu" ] && arch_part="x86_64"
+  asset="straitjacket-${arch_part}-${os_part}.tar.gz"
+  url="https://github.com/$repo/releases/download/$ver/$asset"
+
+  echo "run-straitjacket: fetching $ver ($asset)…" >&2
+  mkdir -p "$cache"
+  tmp=$(mktemp -d)
+  trap 'rm -rf "$tmp"' EXIT
+  curl -fsSL "$url" -o "$tmp/$asset" || { echo "run-straitjacket: download failed — $url" >&2; exit 1; }
+  tar -xzf "$tmp/$asset" -C "$cache" straitjacket || { echo "run-straitjacket: extract failed" >&2; exit 1; }
+  chmod +x "$bin"
+fi
+
+# No path argument: scan the working tree honoring the repo's .straitjacket.yaml
+# (its `paths:` scoping) exactly as CI does. Passing `.` would override that.
+exec "$bin"
