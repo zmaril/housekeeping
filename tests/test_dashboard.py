@@ -82,7 +82,43 @@ def test_ci_version_rows_and_repeated_footer():
     out = render_matrix("f", members, payloads)
     assert "housekeeping CI" in out and "straitjacket CI" in out  # the two meta rows
     assert "v0.2.3" in out  # the pinned straitjacket ref is shown
-    assert "<tfoot>" in out and out.count(">a<") == 2  # repo header repeated at bottom
+    # repo header (name wrapped in a <span>) repeated in thead and tfoot
+    assert "<tfoot>" in out and out.count(">a</span>") == 2
+
+
+def test_activity_table_lists_prs_and_issues_with_repo_column():
+    members = [M("o/a"), M("o/b")]
+    pa = payload("o/a", [row("license", "pass")])
+    pa["activity"] = {
+        "issues": [{"number": 7, "title": "a bug", "url": "https://x.test/i/7"}],
+        "pulls": [{"number": 3, "title": "a fix", "url": "https://x.test/p/3"}],
+    }
+    pb = payload("o/b", [row("license", "pass")])
+    pb["activity"] = {
+        "issues": [],
+        "pulls": [{"number": 9, "title": "b pr", "url": "https://x.test/p/9"}],
+    }
+    out = render_matrix("f", members, [pa, pb])
+    # a second, standalone table with a repo column and a scroll box
+    assert "activity-table" in out and "activity-scroll" in out
+    assert ">repo</th>" in out and ">title</th>" in out
+    # every open PR and issue across the fleet is listed, with its repo
+    assert "#3" in out and "#9" in out and "a fix" in out and "b pr" in out
+    assert "#7" in out and "a bug" in out
+    assert ">a</a>" in out and ">b</a>" in out  # repo shown as a column value
+    # PRs are grouped before issues
+    assert out.index("#3") < out.index("#7")
+    # header count summary
+    assert "2 PRs · 1 issues" in out
+
+
+def test_activity_table_empty_and_unreachable_are_tolerated():
+    # no open items -> a single empty-state row, page still renders
+    out = render_matrix("f", [M("o/a")], [payload("o/a", [row("license", "pass")])])
+    assert "nothing open across the fleet" in out
+    # an unreachable member contributes no rows but doesn't crash the table
+    out2 = render_matrix("f", [M("o/a")], [None])
+    assert "activity-table" in out2 and "nothing open across the fleet" in out2
 
 
 def test_render_document_is_a_full_standalone_page():

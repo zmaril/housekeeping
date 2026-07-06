@@ -2,6 +2,23 @@
 
 Notable changes to housekeeping, newest first.
 
+## Unreleased
+
+- Fleet dashboard now carries a second table: **every open PR and issue across
+  the fleet**, one row each, with the repo as a column (PRs first, then issues,
+  each linking to GitHub) and a per-fleet count. Open issues/PRs are folded into
+  the audit payload (`fetch_activity`), so the dashboard stays a pure view.
+- New `housekeeper serve housecaptain.toml` command: serves the dashboard from a
+  local web server with a **Regenerate** button — and an optional 60s
+  auto-refresh — that re-audits the fleet on demand. The static `--html` file
+  output is untouched; the live controls are injected only into the served page.
+- `housekeeper fleet` now audits members **concurrently** (a thread pool,
+  results still in fleet order), so a full re-audit drops to about the slowest
+  single repo instead of the sum — roughly 3× faster on the powderworks fleet.
+- Dashboard legend spells out the glyphs — `warn` is now
+  "recommended, not required" and `fail` is "required", with hover tooltips —
+  so a `!` cell reads as advisory rather than mysterious.
+
 ## v0.16.0 — 2026-07-05
 
 - Fleet dashboard now shows **which shared-CI ref each repo pins** — two version
