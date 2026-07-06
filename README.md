@@ -119,10 +119,16 @@ fires on pull_request + push + schedule, its latest default-branch run is
 green, and the member's `.housekeeping.toml` doesn't contradict fleet
 policy — divergence is surfaced as a conflict for a human to reconcile,
 never silently resolved. `housekeeper fleet` is the deep version: the full
-audit against every member from your machine, with a scoreboard. And
+audit against every member from your machine (members audited concurrently),
+with a scoreboard. `--html FILE` writes a standalone dashboard — the check
+matrix plus a table of every open PR and issue across the fleet. And
 `housekeeper captain --dispatch` (action input `dispatch: true`) is the
 fleet's "now" button: it triggers every member's self-audit immediately, so
 a new check reaches everyone without waiting out the weekly crons.
+
+`housekeeper serve housecaptain.toml` puts the same dashboard behind a local
+web server with a **Regenerate** button (and an optional 60s auto-refresh)
+that re-audits the fleet on demand — no re-running the command by hand.
 
 #### Managed configs
 

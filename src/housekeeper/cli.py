@@ -6,6 +6,7 @@ import argparse
 import json
 import os
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -50,6 +51,39 @@ def select_checks(only: str | None) -> list:
         )
         sys.exit(2)
     return [CHECKS[n] for n in names]
+
+
+def fetch_activity(ctx: RepoContext) -> dict:
+    """Open issues and PRs for the repo, for the dashboard's scrollable lists.
+
+    Best-effort: an API hiccup yields empty lists rather than sinking the audit."""
+
+    def item(it: dict) -> dict:
+        return {"number": it["number"], "title": it["title"], "url": it["html_url"]}
+
+    try:
+        raw_issues = (
+            ctx.api(
+                f"repos/{ctx.repo}/issues", params={"state": "open", "per_page": 100}
+            )
+            or []
+        )
+    except GhError:
+        raw_issues = []
+    try:
+        raw_pulls = (
+            ctx.api(
+                f"repos/{ctx.repo}/pulls", params={"state": "open", "per_page": 100}
+            )
+            or []
+        )
+    except GhError:
+        raw_pulls = []
+
+    # the issues endpoint also returns PRs — drop those (they carry a pull_request key)
+    issues = [item(i) for i in raw_issues if "pull_request" not in i]
+    pulls = [item(p) for p in raw_pulls]
+    return {"issues": issues, "pulls": pulls}
 
 
 def audit(repo: str, only: str | None = None) -> dict:
@@ -103,6 +137,7 @@ def audit(repo: str, only: str | None = None) -> dict:
         "visibility": visibility,
         "logo": ctx.config.logo,
         "ci_versions": ci_versions(repo, read_workflows(getattr(ctx, "workdir", None))),
+        "activity": fetch_activity(ctx),
         "checked_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "results": rows,
     }
@@ -110,6 +145,28 @@ def audit(repo: str, only: str | None = None) -> dict:
     results_path = RESULTS_DIR / f"{repo.replace('/', '--')}.json"
     results_path.write_text(json.dumps(payload, indent=2) + "\n")
     return payload
+
+
+def audit_fleet(members: list, max_workers: int = 8) -> list[dict | None]:
+    """Audit every member concurrently, returning payloads in member order.
+    An unreachable member (GhError) becomes None rather than sinking the run.
+
+    Members are independent — each hits its own repo via `gh`/`git` and writes its
+    own results file — so they parallelize cleanly; wall-clock drops to about the
+    slowest single repo instead of the sum."""
+
+    def one(member) -> dict | None:
+        try:
+            return audit(member.repo)
+        except GhError as e:
+            console.print(f"[red]{member.repo}: api error: {e}[/red]")
+            return None
+
+    if not members:
+        return []
+    console.print(f"[dim]auditing {len(members)} members concurrently…[/dim]")
+    with ThreadPoolExecutor(max_workers=min(max_workers, len(members))) as pool:
+        return list(pool.map(one, members))  # map preserves input order
 
 
 def cmd_check(args) -> int:
@@ -289,14 +346,7 @@ def cmd_captain(args) -> int:
 
 def cmd_fleet(args) -> int:
     manifest = load_manifest_or_exit(args.manifest)
-    payloads: list[dict | None] = []
-    for member in manifest.members:
-        console.print(f"[dim]auditing {member.repo}…[/dim]")
-        try:
-            payloads.append(audit(member.repo))
-        except GhError as e:
-            console.print(f"[red]{member.repo}: api error: {e}[/red]")
-            payloads.append(None)
+    payloads = audit_fleet(manifest.members)
 
     table = Table(title=f"{manifest.name} fleet — full audit")
     for column in ("member", "pass", "warn", "fail", "failing checks"):
@@ -332,6 +382,20 @@ def cmd_fleet(args) -> int:
         )
         console.print(f"[green]dashboard written to {args.html}[/green]")
     return worst
+
+
+def cmd_serve(args) -> int:
+    manifest = load_manifest_or_exit(args.manifest)
+    from .dashboard import render_document
+    from .serve import serve
+
+    def generate() -> str:
+        payloads = audit_fleet(manifest.members)
+        return render_document(manifest.name, manifest.members, payloads)
+
+    return serve(
+        generate, host=args.host, port=args.port, open_browser=not args.no_open
+    )
 
 
 def cmd_report(args) -> int:
@@ -458,6 +522,24 @@ def main() -> None:
         "--html", metavar="FILE", help="also write an HTML check matrix dashboard"
     )
     p_fleet.set_defaults(func=cmd_fleet)
+
+    p_serve = sub.add_parser(
+        "serve", help="serve the fleet dashboard with a live Regenerate button"
+    )
+    p_serve.add_argument("manifest", nargs="?", help="path to housecaptain.toml")
+    p_serve.add_argument(
+        "--port", type=int, default=8799, help="port to listen on (default: 8799)"
+    )
+    p_serve.add_argument(
+        "--host", default="127.0.0.1", help="host to bind (default: 127.0.0.1)"
+    )
+    p_serve.add_argument(
+        "--no-open",
+        action="store_true",
+        dest="no_open",
+        help="don't open a browser on start",
+    )
+    p_serve.set_defaults(func=cmd_serve)
 
     args = parser.parse_args()
     sys.exit(args.func(args))

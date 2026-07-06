@@ -22,12 +22,17 @@ CELL = {
     "none": ("", "off"),
 }
 
+# label + hover tooltip per legend entry; the tooltip spells out what the glyph means.
 LEGEND = [
-    ("ok", "✓ pass"),
-    ("warn", "! warn"),
-    ("bad", "✗ fail"),
-    ("skip", "– skip"),
-    ("off", "· off / n-a"),
+    ("ok", "✓ pass", "check met"),
+    (
+        "warn",
+        "! warn — recommended, not required",
+        "a recommended check isn't met; advisory, doesn't fail the fleet",
+    ),
+    ("bad", "✗ fail — required", "a required check isn't met; fails the fleet"),
+    ("skip", "– skip", "not applicable to this repo"),
+    ("off", "· off / n-a", "disabled for this repo, or the check didn't run"),
 ]
 
 # metadata rows (version text, not a status glyph): which shared-CI ref each repo pins.
@@ -75,6 +80,50 @@ def _repo_header(member, payload: dict | None) -> str:
     logo = logo_url(repo, payload.get("logo", ""))
     img = f'<img src="{html.escape(logo)}" alt="" loading="lazy">' if logo else ""
     return f'<th class="repo"><a href="{href}">{img}<span>{short}</span></a></th>'
+
+
+# the second table's kinds: (label, badge css, payload activity key). PRs first.
+ACTIVITY_KINDS = [("PR", "pr", "pulls"), ("issue", "issue", "issues")]
+
+
+def _activity_table(members: list, payloads: list[dict | None]) -> str:
+    """A second, standalone table: every open PR then every open issue across the
+    fleet, one row each, with the repo as a column. Scrolls within its own box."""
+    rows = []
+    totals = {"pulls": 0, "issues": 0}
+    for label, badge, key in ACTIVITY_KINDS:
+        for member, payload in zip(members, payloads):
+            if payload is None:
+                continue
+            repo = member.repo
+            short = html.escape(repo.split("/")[-1])
+            repo_href = f"https://github.com/{html.escape(repo)}"
+            for it in (payload.get("activity") or {}).get(key, []):
+                totals[key] += 1
+                url = html.escape(it["url"])
+                rows.append(
+                    "<tr>"
+                    f'<td class="a-repo"><a href="{repo_href}">{short}</a></td>'
+                    f'<td><span class="kind {badge}">{label}</span></td>'
+                    f'<td class="a-num"><a href="{url}">#{it["number"]}</a></td>'
+                    f'<td class="a-title"><a href="{url}">{html.escape(it["title"])}</a></td>'
+                    "</tr>"
+                )
+    body = (
+        "\n".join(rows)
+        if rows
+        else '<tr><td colspan="4" class="empty">nothing open across the fleet</td></tr>'
+    )
+    return (
+        '<section class="activity">'
+        '<h2 class="section-title">Open pull requests &amp; issues '
+        f'<span class="sub">{totals["pulls"]} PRs · {totals["issues"]} issues</span>'
+        "</h2>"
+        '<div class="activity-scroll"><table class="activity-table">'
+        "<thead><tr><th>repo</th><th>kind</th><th>#</th><th>title</th></tr></thead>"
+        f"<tbody>{body}</tbody></table></div>"
+        "</section>"
+    )
 
 
 def render_matrix(
@@ -130,7 +179,8 @@ def render_matrix(
         )
 
     legend = " ".join(
-        f'<span class="tag {cls}">{html.escape(label)}</span>' for cls, label in LEGEND
+        f'<span class="tag {cls}" title="{html.escape(tip)}">{html.escape(label)}</span>'
+        for cls, label, tip in LEGEND
     )
     return _PAGE.format(
         name=html.escape(name),
@@ -140,6 +190,7 @@ def render_matrix(
         meta="\n".join(meta_rows),
         body="\n".join(body_rows),
         foot=foot,
+        activity=_activity_table(members, payloads),
     )
 
 
@@ -170,6 +221,7 @@ _PAGE = """\
 <tfoot><tr>{foot}</tr></tfoot>
 </table>
 </div>
+{activity}
 <style>
 :root {{ --ok:#1a7f37; --warn:#9a6700; --bad:#cf222e; --skip:#8c959f; --line:#d0d7de; --bg:#fff; --fg:#1f2328; --head:#f6f8fa; }}
 @media (prefers-color-scheme: dark) {{ :root {{ --ok:#3fb950; --warn:#d29922; --bad:#f85149; --skip:#6e7681; --line:#30363d; --bg:#0d1117; --fg:#e6edf3; --head:#161b22; }} }}
@@ -200,5 +252,24 @@ th.check {{ background: var(--head); text-align: left; padding: .3rem .8rem; pos
 tr.meta td.ver {{ background: var(--head); font: 600 11px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--fg); white-space: nowrap; text-align: center; padding: 0 .45rem; }}
 tr.meta th.check {{ font-style: italic; font-weight: 500; }}
 tr.last td, tr.last th {{ border-bottom: 2px solid var(--skip); }}
+/* second table: every open PR then issue across the fleet, repo as a column */
+.activity {{ margin-top: 2.5rem; }}
+.section-title {{ font-size: 1.1rem; margin: 0 0 .75rem; }}
+.section-title .sub {{ font-size: .8rem; color: var(--skip); font-weight: 400; }}
+.activity-scroll {{ max-height: 34rem; overflow: auto; border: 1px solid var(--line); border-radius: 8px; }}
+table.activity-table {{ border-collapse: collapse; width: 100%; }}
+.activity-table th, .activity-table td {{ border: 0; border-bottom: 1px solid var(--line); width: auto; height: auto; text-align: left; font-weight: 400; padding: .4rem .7rem; vertical-align: baseline; }}
+.activity-table tbody tr:last-child td {{ border-bottom: 0; }}
+.activity-table thead th {{ position: sticky; top: 0; z-index: 1; background: var(--head); font-weight: 600; font-size: .78rem; text-transform: uppercase; letter-spacing: .03em; color: var(--skip); }}
+.activity-table tbody tr:hover td {{ background: color-mix(in srgb, var(--head) 60%, transparent); }}
+.activity-table a {{ color: var(--fg); text-decoration: none; }}
+.activity-table a:hover {{ text-decoration: underline; }}
+.activity-table .a-repo a {{ font-weight: 500; }}
+.activity-table .a-num a {{ color: var(--skip); font: 600 .82rem/1 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: nowrap; }}
+.activity-table .a-title {{ max-width: 40rem; }}
+.kind {{ display: inline-block; font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; padding: .05rem .45rem; border-radius: 999px; }}
+.kind.pr {{ color: var(--ok); border: 1px solid color-mix(in srgb, var(--ok) 55%, transparent); }}
+.kind.issue {{ color: var(--warn); border: 1px solid color-mix(in srgb, var(--warn) 55%, transparent); }}
+.activity-table .empty {{ color: var(--skip); font-style: italic; text-align: center; }}
 </style>
 """
