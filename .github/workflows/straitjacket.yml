@@ -7,6 +7,7 @@ on:
 jobs:
   straitjacket:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       # Pinned, not `main`/latest: a new straitjacket rule shouldn't fail this

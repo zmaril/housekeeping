@@ -6,6 +6,7 @@ on:
 jobs:
   pr-title:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: PR title follows conventional commits
         env:
