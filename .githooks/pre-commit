@@ -4,6 +4,11 @@
 # Bypass with `git commit --no-verify`. Activate with:
 #   git config core.hooksPath .githooks
 set -e
+# git exports GIT_DIR/GIT_INDEX_FILE/GIT_WORK_TREE to hooks; the test suites
+# spawn git in temp fixtures and those vars would point them at THIS repo
+# (a tmp `git add -A` once staged the whole repo's deletion into the live
+# index mid-commit). Hook runs must see the same world as a terminal run.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_OBJECT_DIRECTORY
 run() { printf '\n\033[1m▶ %s\033[0m\n' "$*"; "$@"; }
 
 run uv run ruff check .

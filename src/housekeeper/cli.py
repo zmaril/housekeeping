@@ -29,6 +29,26 @@ STYLE = {
 }
 
 
+# Checks that grade the DEFAULT BRANCH's state or the repo's settings — things
+# no pull request can change. On pull_request runs they inform instead of
+# gate: failing a PR for main's redness is how the fix-carrying PR gets
+# deadlocked (the same self-reference ci-green already excludes for its
+# hosting workflow and the housekeeping family — see its docstring). They
+# stay hard on push/schedule/local runs, where main's state is the point.
+MAIN_STATE_CHECKS = frozenset({"ci-green", "branch-protection", "required-checks"})
+
+
+def effective_severity(check_name: str, severity: str, event: str) -> tuple[str, bool]:
+    """(severity, demoted): required main-state checks soften on PR events."""
+    if (
+        event == "pull_request"
+        and severity == "required"
+        and check_name in MAIN_STATE_CHECKS
+    ):
+        return "recommended", True
+    return severity, False
+
+
 def resolve_repo(arg: str | None) -> str:
     repo = arg or repo_from_cwd()
     if not repo:
@@ -111,21 +131,27 @@ def audit(repo: str, only: str | None = None) -> dict:
                 "fixable": False,
             }
         )
+    event = os.environ.get("GITHUB_EVENT_NAME", "")
     for check in selected:
         severity = ctx.config.severity(check.name, visibility)
         if severity == "off":
             continue
+        severity, demoted = effective_severity(check.name, severity, event)
         try:
             result = check.run(ctx)
         except Exception as e:  # a broken check shouldn't sink the run
             result = Result(Status.ERROR, f"check crashed: {e}")
+        note = result.note
+        if demoted and result.status == Status.FAIL:
+            suffix = "informational on PR runs — grades main/settings, which a PR can't change"
+            note = f"{note}; {suffix}" if note else suffix
         rows.append(
             {
                 "check": check.name,
                 "status": result.status.value,
                 "severity": severity,
                 "details": result.details,
-                "note": result.note,
+                "note": note,
                 "fixable": check.fixable,
             }
         )

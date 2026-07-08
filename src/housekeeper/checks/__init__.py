@@ -3,6 +3,7 @@
 from . import (  # noqa: F401
     branch_protection,
     required_checks,
+    ruleset_bypass,
     ci,
     ci_scoped,
     ci_continue_on_error,
