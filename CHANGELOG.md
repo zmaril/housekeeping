@@ -2,6 +2,19 @@
 
 Notable changes to housekeeping, newest first.
 
+## v0.19.0 — 2026-07-08
+
+- **Per-repo `only` targeting** for `[[policy.managed-config]]`: an optional
+  `only = ["owner/repo", …]` allow-list restricts a fleet-owned config to just
+  the members that actually use it, instead of syncing byte-identically to
+  every in-scope member. Empty `only` (the default) keeps today's
+  apply-to-every-in-scope-member behavior; a non-empty list scopes both the
+  sync and the drift notes to the listed repos, emitting a `skipped (not in
+  only list)` row for the rest. Values must match `[[member]].repo` exactly,
+  and unknown repos are tolerated — a listed repo that isn't a member simply
+  never matches. Lets a config like biome, used by only a subset of the fleet,
+  target precisely.
+
 ## v0.18.0 — 2026-07-08
 
 - **PR-context grading**: `ci-green`, `branch-protection`, and
