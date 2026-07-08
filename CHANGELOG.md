@@ -2,6 +2,28 @@
 
 Notable changes to housekeeping, newest first.
 
+## v0.18.0 — 2026-07-08
+
+- **PR-context grading**: `ci-green`, `branch-protection`, and
+  `required-checks` grade the default branch's runs or the repo's settings —
+  nothing a pull request's diff can change — so on `pull_request` events they
+  now demote from required to recommended (warn, with an explanatory note in
+  the table). Push, schedule, and local runs keep them hard, which is where
+  main's state is actionable; the captain's fleet table still catches a
+  rotting main. Ends the admin-merge treadmill: the bootstrap compliance PR,
+  the fix-for-the-red-main PR, and every innocent PR under a nightly flake
+  all merge on their own merits.
+- New **`ruleset-bypass`** check (recommended, fixable): a gating ruleset
+  (pull_request / required_status_checks rules) must name a bypass actor,
+  because GitHub rulesets ignore `gh pr merge --admin` without one.
+  `housekeeper fix ruleset-bypass` grants Repository admin
+  (`bypass_mode: always`).
+- Hardening: git exports `GIT_DIR`/`GIT_INDEX_FILE` to hooks, which silently
+  redirected the test suite's temp-repo git calls at the real repo when run
+  under pre-commit (staging the repo's deletion into the live index, once).
+  The hook now unsets them and an autouse conftest fixture strips them for
+  every test.
+
 ## v0.17.0 — 2026-07-08
 
 - `scripts` check (required): shell scripts live under `scripts/`, a
