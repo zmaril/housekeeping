@@ -7,8 +7,9 @@ and lint, no CI step masking its own failure with `continue-on-error`, a
 scheduled run so bitrot surfaces on its own, bounded job timeouts, no
 rerun-until-green test retries, a pinned (non-floating) CI toolchain, dependabot
 coverage, secret scanning, read-only workflow tokens, lockfiles committed and in
-sync, gitignore coverage, CODEOWNERS routing review, TODO/FIXME markers kept in
-the todo file rather than scattered,
+sync, gitignore coverage, CODEOWNERS routing review, shell scripts corralled
+under `scripts/` with a `dev.sh` that stands up the dev environment, TODO/FIXME
+markers kept in the todo file rather than scattered,
 [straitjacket](https://github.com/zmaril/Straitjacket) wired into CI, stylelint
 on stylesheets, vale on prose style and codespell on typos, a README that clears
 the floor, a reachable website, a license, sane repo metadata, and no stale PRs
@@ -250,6 +251,9 @@ Issues and PRs welcome. The most useful thing you can send is a repo where
 housekeeper judges wrongly — a check that passes when it shouldn't, fails
 when it shouldn't, or a skip that deserves a better note. Concrete examples
 beat descriptions.
+
+Clone, then run `./scripts/dev.sh` — it syncs the uv environment and wires up
+the committed git hooks, so you're ready to test, lint, and audit in one step.
 
 New checks are one module in `src/housekeeper/checks/` — see the check
 contract in [notes/design.md](notes/design.md). House rules: checks are read-only, fixes

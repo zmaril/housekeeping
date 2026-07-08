@@ -19,6 +19,7 @@ from . import (  # noqa: F401
     lockfiles,
     gitignore,
     codeowners,
+    scripts,
     stray_files,
     stray_todos,
     conventional_commits,

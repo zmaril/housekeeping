@@ -23,7 +23,8 @@ open a PR. Nothing mutates without an explicit yes.
 
 ## Architecture
 
-One Python project, managed with uv. No shell scripts.
+One Python project, managed with uv. The only shell lives in `scripts/` —
+`scripts/dev.sh` stands up the dev environment (uv sync + git hooks).
 
 ```
 housekeeping/

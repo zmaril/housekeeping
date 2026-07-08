@@ -28,6 +28,7 @@ DEFAULT_SEVERITY = {
     "lockfiles": "required",
     "gitignore": "recommended",
     "codeowners": "recommended",
+    "scripts": "required",
     "stray-files": "recommended",
     "stray-todos": "recommended",
     "conventional-commits": "recommended",
