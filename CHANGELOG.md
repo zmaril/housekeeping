@@ -4,6 +4,11 @@ Notable changes to housekeeping, newest first.
 
 ## Unreleased
 
+- `scripts` check (required): shell scripts live under `scripts/`, a
+  `scripts/dev.sh` stands up the basic dev environment, and the README points at
+  it. Hidden and vendored trees (`.githooks/`, `node_modules/`, …) are never
+  scanned — git hooks belong in `.githooks/`. Configurable via `[scripts]`
+  (`dir`, `dev`, `allow`). Housekeeping now ships its own `scripts/dev.sh`.
 - Fleet dashboard now carries a second table: **every open PR and issue across
   the fleet**, one row each, with the repo as a column (PRs first, then issues,
   each linking to GitHub) and a per-fleet count. Open issues/PRs are folded into
