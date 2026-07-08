@@ -2,7 +2,7 @@
 
 Notable changes to housekeeping, newest first.
 
-## Unreleased
+## v0.17.0 — 2026-07-08
 
 - `scripts` check (required): shell scripts live under `scripts/`, a
   `scripts/dev.sh` stands up the basic dev environment, and the README points at
