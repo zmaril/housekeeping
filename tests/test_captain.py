@@ -330,6 +330,94 @@ def test_managed_config_parses(tmp_path):
     assert mc.scope == "all"
 
 
+ONLY_MC = """
+[[policy.managed-config]]
+check = "biome"
+only = ["zmaril/powdermonkey"]
+paths = { "biome.base.json" = ".fleet/biome/base.json" }
+"""
+
+
+def test_managed_config_only_parses(tmp_path):
+    path = tmp_path / "housecaptain.toml"
+    path.write_text(MANIFEST + ONLY_MC)
+    manifest = load_manifest(path)
+    mc = manifest.managed_configs[0]
+    assert mc.check == "biome"
+    assert mc.only == ["zmaril/powdermonkey"]
+    # default stays empty (applies everywhere) for configs without `only`
+    assert ManagedConfig("stylelint", {".x": ".fleet/x"}).only == []
+
+
+def test_managed_config_only_must_be_list_of_strings(tmp_path):
+    path = tmp_path / "housecaptain.toml"
+    path.write_text(
+        MANIFEST + '\n[[policy.managed-config]]\ncheck = "biome"\nonly = "zmaril/x"\n'
+        'paths = { "biome.base.json" = ".fleet/biome/base.json" }\n'
+    )
+    with pytest.raises(ValueError, match="only"):
+        load_manifest(path)
+
+
+def test_managed_config_only_tolerates_unknown_repos(tmp_path):
+    # A repo listed in `only` that isn't a member never matches — no hard fail.
+    path = tmp_path / "housecaptain.toml"
+    path.write_text(
+        MANIFEST + '\n[[policy.managed-config]]\ncheck = "biome"\n'
+        'only = ["zmaril/not-a-member"]\n'
+        'paths = { "biome.base.json" = ".fleet/biome/base.json" }\n'
+    )
+    manifest = load_manifest(path)
+    assert manifest.managed_configs[0].only == ["zmaril/not-a-member"]
+
+
+def test_managed_config_notes_respects_only(tmp_path):
+    (tmp_path / ".fleet").mkdir()
+    (tmp_path / ".fleet" / "biome.base.json").write_text('{"root": false}\n')
+    mc = ManagedConfig(
+        "biome",
+        {"biome.base.json": ".fleet/biome.base.json"},
+        only=["zmaril/powdermonkey"],
+    )
+    # A targeted repo whose copy drifts is flagged as usual.
+    targeted = FleetCtx(repo="zmaril/powdermonkey", files={"biome.base.json": "{}\n"})
+    assert managed_config_notes(targeted, [mc], tmp_path)
+    # A repo outside `only` is skipped entirely — no note, even though it lacks
+    # the file (which would otherwise read as drift).
+    other = FleetCtx(repo="zmaril/housekeeping", files={})
+    assert managed_config_notes(other, [mc], tmp_path) == []
+
+
+def test_sync_configs_respects_only(tmp_path, monkeypatch):
+    from housekeeper import captain
+    from housekeeper.captain import Manifest, Member, sync_configs
+
+    (tmp_path / ".fleet").mkdir()
+    (tmp_path / ".fleet" / "biome.base.json").write_text('{"root": false}\n')
+    mc = ManagedConfig(
+        "biome",
+        {"biome.base.json": ".fleet/biome.base.json"},
+        only=["zmaril/powdermonkey"],
+    )
+    manifest = Manifest(
+        name="fleet",
+        members=[Member("zmaril/powdermonkey"), Member("zmaril/housekeeping")],
+        managed_configs=[mc],
+    )
+
+    def fake_ctx(repo):
+        # The targeted repo already carries the canonical base -> "in sync".
+        return SyncCtx(contents={"biome.base.json": '{"root": false}\n'}, repo=repo)
+
+    monkeypatch.setattr(captain, "RepoContext", fake_ctx)
+    outcomes = {
+        repo: outcome
+        for repo, _check, outcome in sync_configs(manifest, tmp_path, assume_yes=True)
+    }
+    assert outcomes["zmaril/powdermonkey"] == "in sync"
+    assert outcomes["zmaril/housekeeping"] == "skipped (not in only list)"
+
+
 def test_managed_config_source_must_live_under_fleet(tmp_path):
     path = tmp_path / "housecaptain.toml"
     path.write_text(

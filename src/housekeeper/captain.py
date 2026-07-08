@@ -71,6 +71,10 @@ class ManagedConfig:
     check: str
     paths: dict[str, str]  # member destination -> captain source (under .fleet/)
     scope: str = "all"  # all | public | private
+    # Optional allow-list of member repos (owner/repo) this config applies to.
+    # Empty = every in-scope member (the default). Non-empty = only these repos,
+    # so a config can target just the members that actually use it (e.g. biome).
+    only: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -107,7 +111,15 @@ def _parse_managed_config(path: Path, mc: dict) -> ManagedConfig:
         raise ValueError(
             f"{path}: managed-config scope {scope!r} must be all, public, or private"
         )
-    return ManagedConfig(check=check, paths=dict(paths), scope=scope)
+    only = mc.get("only", [])
+    if not isinstance(only, list) or not all(isinstance(r, str) for r in only):
+        raise ValueError(
+            f"{path}: managed-config only for {check!r} must be a list of "
+            '"owner/repo" strings'
+        )
+    # Unknown repos are tolerated (never hard-fail): a repo listed here that
+    # isn't a member simply never matches, so the config just doesn't sync there.
+    return ManagedConfig(check=check, paths=dict(paths), scope=scope, only=list(only))
 
 
 def load_manifest(path: Path) -> Manifest:
@@ -309,6 +321,8 @@ def managed_config_notes(
         return []
     notes = []
     for mc in managed_configs:
+        if mc.only and ctx.repo not in mc.only:
+            continue
         if mc.scope != "all" and ctx.visibility != mc.scope:
             continue
         if not member_drift(ctx, expand_managed_config(manifest_dir, mc)):
@@ -513,6 +527,11 @@ def sync_configs(
         ctx = RepoContext(member.repo)
         for mc in manifest.managed_configs:
             try:
+                if mc.only and member.repo not in mc.only:
+                    results.append(
+                        (member.repo, mc.check, "skipped (not in only list)")
+                    )
+                    continue
                 if mc.scope != "all" and ctx.visibility != mc.scope:
                     results.append(
                         (member.repo, mc.check, f"skipped ({mc.scope}-only)")
