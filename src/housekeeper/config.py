@@ -11,6 +11,7 @@ SEVERITIES = ("required", "recommended", "off")
 DEFAULT_SEVERITY = {
     "branch-protection": "required",
     "required-checks": "required",
+    "ruleset-bypass": "recommended",
     "ci-exists": "required",
     "ci-scoped": "recommended",
     "ci-continue-on-error": "required",
