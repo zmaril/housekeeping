@@ -183,6 +183,18 @@ jobs:
           token: ${{ secrets.FLEET_PAT }}
 ```
 
+##### The `FLEET_PAT`
+
+The default workflow `GITHUB_TOKEN` can only write to the captain repo, so sync
+needs a separate token stored as the `FLEET_PAT` secret. Create a **fine-grained
+PAT** with **Contents: read/write** and **Pull requests: read/write**, and — the
+sharp edge — grant it access to **every member repo**. Fine-grained PATs are
+repo-scoped: a member missing from the token's repo list fails with a silent
+`HTTP 403` and simply never gets its sync PR, while the rest sync fine. So
+**whenever you add a member to the manifest, add it to the `FLEET_PAT` too.**
+When a sync run reports `error: the sync token can't write to <repo> (HTTP 403)`,
+that member is the one missing from the token.
+
 ### Agent skill
 
 The `tidy-up` skill audits the repo you're in, drives fixes, and does a
