@@ -542,7 +542,18 @@ def sync_configs(
                     ctx, mc.check, desired, assume_yes, confirm_fn
                 )
             except GhError as e:
-                outcome = f"error: {e}"
+                if getattr(e, "status", None) == 403:
+                    # Almost always the sync token missing this member: a
+                    # fine-grained PAT is repo-scoped, so a member absent from
+                    # its list 403s here while the others sync fine.
+                    outcome = (
+                        f"error: the sync token can't write to {member.repo} "
+                        "(HTTP 403) — grant it Contents + Pull requests (write) on "
+                        "this repo; a fine-grained FLEET_PAT must list every member "
+                        "(see README → Fleet captain)"
+                    )
+                else:
+                    outcome = f"error: {e}"
             results.append((member.repo, mc.check, outcome))
     return results
 
