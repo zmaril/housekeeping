@@ -158,6 +158,7 @@ non-skipped check failed.
 | `changelog` | clone | A CHANGELOG file exists (CHANGELOG.md, CHANGES.md, HISTORY.md, …) — presence only; versions, dates, or freeform all fine | Scaffold a newest-first dated stub |
 | `repo-meta` | API | Description set; ≥1 topic; issues enabled | Prompt for values, set via API |
 | `stale` | API | No PRs idle >30 days; no merged-but-undeleted branches; `delete_branch_on_merge` enabled | Enable the setting; delete merged branches (confirm each) |
+| `allow-auto-merge` | API | GitHub `allow_auto_merge` matches the declared `[allow-auto-merge] enabled` preference (default off) | PATCH the repo setting (needs admin) |
 | `stray-files` | clone | One todo pile (default `todo.txt`), notes corralled in one directory (default `notes/`), conventional community files at root, nothing else; all paths configurable, keepers via `[stray-files] allow` | none — needs judgment |
 | `conventional-commits` | clone + API | Enforced in CI (PR-title check or commitlint) and mentioned in README/CONTRIBUTING; recent default-branch adherence reported as a note, never judged retroactively | Set squash-title-from-PR-title; add the PR-title workflow |
 | `stylelint` | clone | If the repo has stylesheets (`.css`/`.scss`/`.less`) or an existing stylelint config, a config is present **and** stylelint runs in CI; skip when there are no stylesheets | Scaffold `.stylelintrc.json` + a CI step |

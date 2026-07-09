@@ -35,5 +35,6 @@ from . import (  # noqa: F401
     license,
     changelog,
     repo_meta,
+    allow_auto_merge,
     stale,
 )
