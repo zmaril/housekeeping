@@ -15,6 +15,7 @@ from . import (  # noqa: F401
     typecheck,
     builds,
     coverage,
+    artifacts_built,
     codegen,
     dependabot,
     secret_scanning,

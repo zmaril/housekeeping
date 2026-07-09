@@ -24,6 +24,7 @@ DEFAULT_SEVERITY = {
     "typecheck": "required",
     "builds": "required",
     "coverage": "recommended",
+    "artifacts-built": "recommended",
     "codegen-drift": "required",
     "dependabot": "required",
     "secret-scanning": "required",
