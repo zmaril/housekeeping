@@ -33,7 +33,9 @@ def write_wf(tmp_path: Path, name: str, content: str) -> None:
 
 def test_rust_without_coverage_fails(tmp_path):
     (tmp_path / "Cargo.toml").write_text("[package]\nname='x'\n")
-    write_wf(tmp_path, "ci.yml", "jobs:\n  test:\n    steps:\n      - run: cargo test\n")
+    write_wf(
+        tmp_path, "ci.yml", "jobs:\n  test:\n    steps:\n      - run: cargo test\n"
+    )
     result = coverage(ctx(tmp_path, "cargo"))
     assert result.status == Status.FAIL
     assert "rust" in result.details and "llvm-cov" in result.details
@@ -75,9 +77,7 @@ def test_python_pytest_cov_in_pyproject_passes(tmp_path):
 
 
 def test_python_tool_coverage_table_passes(tmp_path):
-    (tmp_path / "pyproject.toml").write_text(
-        "[tool.coverage.run]\nsource = ['pkg']\n"
-    )
+    (tmp_path / "pyproject.toml").write_text("[tool.coverage.run]\nsource = ['pkg']\n")
     assert coverage(ctx(tmp_path, "uv")).status == Status.PASS
 
 
