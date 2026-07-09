@@ -344,4 +344,5 @@ proposals above read as history, not open questions.
   following the `ci-green` advisory-first precedent, so it does not turn the fleet red
   on landing (no repo wires coverage yet). Promotion to `required` remains a later,
   per-repo move via `powderworks/housecaptain.toml [policy] locked` once repos wire it.
-  Implemented in a follow-up PR — see follow-up PR (`feat/coverage-presence-check`).
+  Implemented in a follow-up PR — [#76](https://github.com/zmaril/housekeeping/pull/76)
+  (`feat/coverage-presence-check`).
