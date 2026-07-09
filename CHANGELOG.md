@@ -2,6 +2,18 @@
 
 Notable changes to housekeeping, newest first.
 
+## 2026-07-18
+
+- New `housekeeper detect` command: prints the repo's detected ecosystems,
+  typed-language layers, and the build artifacts it produces, plus the
+  recommended fleet setup per ecosystem (`--json` for machine output). Backed by
+  a new artifact-detection layer in `languages.py` (`Artifact` / `ARTIFACTS` /
+  `detect_artifacts`) that reads source manifests — napi addons, PyO3/maturin
+  wheels, Magnus/rb-sys gems, Tauri apps, web/site bundles, and compiled
+  binaries — skipping vendored and build trees so a dependency's artifact never
+  counts as the repo's own. `Ecosystem` gains a `recommends` field carrying the
+  recommended setup for that world. Detection-only: no check verdicts change.
+
 ## v0.25.0 — 2026-07-18
 
 - New **`pinned-versions`** check (recommended, check-only): flags floating

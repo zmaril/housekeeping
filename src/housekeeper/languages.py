@@ -22,6 +22,7 @@ never hard-codes "cargo" or a `cargo test` regex itself.
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -258,8 +259,10 @@ ACTIONS_PINS = PinRule(
 
 @dataclass(frozen=True)
 class Ecosystem:
-    """A package-manager world. The first four fields are positional for backwards
-    compatibility; the rest carry the per-ecosystem knowledge the checks need."""
+    """A package-manager world. The first fields are positional for backwards
+    compatibility; the rest carry the per-ecosystem knowledge the checks need,
+    including `recommends` — the recommended fleet setup for this ecosystem — and
+    `pins`, how pinned-versions judges this ecosystem's specifiers."""
 
     name: str
     manifest: str
@@ -276,6 +279,16 @@ class Ecosystem:
     pins: PinRule | None = (
         None  # how pinned-versions judges this ecosystem's specifiers
     )
+    recommends: tuple[str, ...] = ()  # recommended fleet setup for this ecosystem
+
+
+# ---- Recommended fleet setup per ecosystem (inspectable, not buried in a check) ----
+
+_JS_RECOMMENDS = (
+    "lockfile committed and in sync (lockfiles)",
+    "lint + test in CI (ci-exists)",
+    "tsc --noEmit typecheck in CI (typecheck)",
+)
 
 
 ECOSYSTEMS: dict[str, Ecosystem] = {
@@ -291,6 +304,12 @@ ECOSYSTEMS: dict[str, Ecosystem] = {
         gitignore=("target/",),
         ci_template=CARGO_CI,
         pins=CARGO_PINS,
+        recommends=(
+            "Cargo.lock committed and in sync (lockfiles)",
+            "cargo fmt --check, clippy, and test in CI (ci-exists)",
+            "straitjacket wired into CI (straitjacket)",
+            "a pinned toolchain (reproducible-toolchain)",
+        ),
     ),
     "bun": Ecosystem(
         "bun",
@@ -306,6 +325,7 @@ ECOSYSTEMS: dict[str, Ecosystem] = {
         ci_template=BUN_CI,
         typecheck_template=BUN_TYPECHECK,
         pins=NPM_PINS,
+        recommends=_JS_RECOMMENDS,
     ),
     "pnpm": Ecosystem(
         "pnpm",
@@ -318,6 +338,7 @@ ECOSYSTEMS: dict[str, Ecosystem] = {
         lock_regen=("pnpm", "install", "--lockfile-only"),
         gitignore=("node_modules/",),
         pins=NPM_PINS,
+        recommends=_JS_RECOMMENDS,
     ),
     "yarn": Ecosystem(
         "yarn",
@@ -330,6 +351,7 @@ ECOSYSTEMS: dict[str, Ecosystem] = {
         lock_regen=("yarn", "install", "--mode=skip-build"),
         gitignore=("node_modules/",),
         pins=NPM_PINS,
+        recommends=_JS_RECOMMENDS,
     ),
     "npm": Ecosystem(
         "npm",
@@ -343,6 +365,7 @@ ECOSYSTEMS: dict[str, Ecosystem] = {
         gitignore=("node_modules/",),
         typecheck_template=NPM_TYPECHECK,
         pins=NPM_PINS,
+        recommends=_JS_RECOMMENDS,
     ),
     "uv": Ecosystem(
         "uv",
@@ -357,6 +380,11 @@ ECOSYSTEMS: dict[str, Ecosystem] = {
         gitignore=(".venv/", "__pycache__/"),
         ci_template=UV_CI,
         pins=PYTHON_PINS,
+        recommends=(
+            "uv.lock committed and in sync (lockfiles)",
+            "ruff check, ruff format, and pytest in CI (ci-exists)",
+            "mypy or pyright typecheck in CI (typecheck)",
+        ),
     ),
     "pip": Ecosystem(
         "pip",
@@ -366,6 +394,7 @@ ECOSYSTEMS: dict[str, Ecosystem] = {
         language="python",
         gitignore=(".venv/", "__pycache__/"),
         pins=PYTHON_PINS,
+        recommends=("pin dependencies; prefer uv for a real lockfile (lockfiles)",),
     ),
     "ruby": Ecosystem(
         "ruby",
@@ -375,6 +404,10 @@ ECOSYSTEMS: dict[str, Ecosystem] = {
         language="ruby",
         ci_template=RUBY_CI,
         pins=RUBY_PINS,
+        recommends=(
+            "Gemfile.lock committed (lockfiles)",
+            "rubocop and rake test in CI (ci-exists)",
+        ),
     ),
     "go": Ecosystem(
         "go",
@@ -386,6 +419,10 @@ ECOSYSTEMS: dict[str, Ecosystem] = {
         ci_template=GO_CI,
         # No pin rule: go.mod requires resolve to exact versions (MVS + go.sum), so
         # there is no floating-specifier concept for pinned-versions to judge.
+        recommends=(
+            "go.sum committed (lockfiles)",
+            "gofmt, go vet, and go test in CI (ci-exists)",
+        ),
     ),
     "github-actions": Ecosystem(
         "github-actions",
@@ -393,6 +430,10 @@ ECOSYSTEMS: dict[str, Ecosystem] = {
         None,
         "github-actions",
         pins=ACTIONS_PINS,
+        recommends=(
+            "github-actions covered by dependabot (dependabot)",
+            "read-only default workflow token (workflow-permissions)",
+        ),
     ),
 }
 
@@ -437,6 +478,160 @@ def detect_ecosystems(workdir: Path) -> list[Ecosystem]:
     return found
 
 
+# ---- Build artifacts: what a repo PRODUCES that CI must actually build --------
+
+
+@dataclass(frozen=True)
+class Artifact:
+    """A build output a repo produces: a native addon, a wheel, a gem, a desktop
+    app, a site bundle, a binary. Detected from source manifests (build outputs
+    aren't committed), and carrying the CI signal that proves the artifact is
+    actually built, so a green run that never builds it is caught.
+
+    `ci_signal` matches concatenated workflow `run:`/`uses:` text (with
+    `bun run <script>` expanded one level, the way the CI checks already do).
+    `heavy` marks an artifact whose full build is too slow for every PR and belongs
+    on a scheduled workflow (a Tauri bundle); the per-PR gate is a lighter compile
+    check.
+    """
+
+    name: str
+    label: str
+    ci_signal: re.Pattern
+    heavy: bool = False
+    guidance: str = ""
+
+
+ARTIFACTS: dict[str, Artifact] = {
+    "napi": Artifact(
+        "napi",
+        "Node native addon (napi-rs)",
+        re.compile(r"napi build", re.I),
+        guidance="build the addon in CI with `napi build` "
+        "(often a `bun run build` that maps to it)",
+    ),
+    "wheel": Artifact(
+        "wheel",
+        "Python extension wheel (PyO3/maturin)",
+        re.compile(r"\bmaturin\b", re.I),
+        guidance="build the extension in CI with maturin (develop or build)",
+    ),
+    "gem": Artifact(
+        "gem",
+        "Ruby native gem (Magnus/rb-sys)",
+        re.compile(r"\b(extconf\.rb|create_rust_makefile)\b", re.I),
+        guidance="compile the extension in CI (ruby extconf.rb && make)",
+    ),
+    "tauri": Artifact(
+        "tauri",
+        "Tauri desktop app",
+        re.compile(r"tauri build", re.I),
+        heavy=True,
+        guidance="full `tauri build` on a scheduled workflow, plus a per-PR "
+        "compile check (cargo check on src-tauri)",
+    ),
+    "site": Artifact(
+        "site",
+        "web/site bundle",
+        # the named site bundlers, plus a browser-targeted `bun build` (Bun's own
+        # bundler) — but NOT `bun build --compile`, which is a standalone binary.
+        re.compile(
+            r"\b(next build|vite build|astro build|gatsby build"
+            r"|bun build(?![^\n]*--compile)[^\n]*--target[= ]browser)\b",
+            re.I,
+        ),
+        guidance="run the site build in CI so a broken bundle fails before deploy",
+    ),
+    "binary": Artifact(
+        "binary",
+        "compiled binary",
+        re.compile(r"(cargo build --release|cargo install|bun build --compile)", re.I),
+        guidance="build the release binary in CI",
+    ),
+}
+
+
+_ARTIFACT_SKIP_DIRS = {
+    "node_modules",
+    "vendor",
+    "target",
+    "dist",
+    "build",
+    "__pycache__",
+}
+
+
+def _manifest_files(workdir: Path, filename: str):
+    """Every `filename` under workdir, skipping hidden and vendored/build dirs
+    (so a napi dep inside node_modules never counts as the repo's own artifact)."""
+    for path in workdir.rglob(filename):
+        rel = path.relative_to(workdir)
+        if any(
+            part.startswith(".") or part in _ARTIFACT_SKIP_DIRS
+            for part in rel.parts[:-1]
+        ):
+            continue
+        yield path
+
+
+def detect_artifacts(workdir: Path) -> list[Artifact]:
+    """Which build artifacts this repo produces, from its source manifests. Returns
+    deduped shared registry entries (immutable), like detect_ecosystems."""
+    found: set[str] = set()
+
+    # napi + web bundle + bun-compiled binary all read package.json — one walk.
+    for pkg in _manifest_files(workdir, "package.json"):
+        text = pkg.read_text(errors="replace")
+        if "@napi-rs/cli" in text or "napi build" in text:
+            found.add("napi")
+        try:
+            scripts = json.loads(text).get("scripts", {})
+        except (json.JSONDecodeError, AttributeError):
+            continue
+        if not isinstance(scripts, dict):
+            continue
+        # A web bundle can hide under any build-like script name (`build`,
+        # `build:web`, `web:build`), the way the builds check already treats them.
+        build_scripts = [
+            str(v)
+            for name, v in scripts.items()
+            if name == "build" or name.startswith("build:") or name.endswith(":build")
+        ]
+        if any(ARTIFACTS["site"].ci_signal.search(s) for s in build_scripts):
+            found.add("site")
+        if any("bun build --compile" in str(v) for v in scripts.values()):
+            found.add("binary")
+
+    # PyO3/maturin wheel.
+    for pyproject in _manifest_files(workdir, "pyproject.toml"):
+        text = pyproject.read_text(errors="replace")
+        if 'build-backend = "maturin"' in text or "[tool.maturin]" in text:
+            found.add("wheel")
+
+    # Magnus/rb-sys gem native extension.
+    for extconf in _manifest_files(workdir, "extconf.rb"):
+        text = extconf.read_text(errors="replace")
+        if "create_rust_makefile" in text or "rb_sys" in text:
+            found.add("gem")
+
+    # Tauri desktop app: a src-tauri/ dir with its config.
+    for conf in _manifest_files(workdir, "tauri.conf.json"):
+        if conf.parent.name == "src-tauri":
+            found.add("tauri")
+
+    # Compiled binary (Rust): a crate with [[bin]] or a main.rs / src/bin/.
+    for cargo in _manifest_files(workdir, "Cargo.toml"):
+        crate = cargo.parent
+        if (
+            "[[bin]]" in cargo.read_text(errors="replace")
+            or (crate / "src" / "main.rs").is_file()
+            or (crate / "src" / "bin").is_dir()
+        ):
+            found.add("binary")
+
+    return [art for name, art in ARTIFACTS.items() if name in found]
+
+
 # ---- Typed languages: the optional type-layer axis ---------------------------
 
 
@@ -471,3 +666,13 @@ TYPED_LANGUAGES: dict[str, TypedLanguage] = {
         "run clj-kondo (or core.typed) in CI",
     ),
 }
+
+
+def detect_typed_languages(workdir: Path) -> list[str]:
+    """Typed-language layers present by their marker files (see TYPED_LANGUAGES).
+    Pure detection — the typecheck check adds its own verdict logic on top."""
+    return [
+        name
+        for name, tl in TYPED_LANGUAGES.items()
+        if any((workdir / marker).is_file() for marker in tl.markers)
+    ]

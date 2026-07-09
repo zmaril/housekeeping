@@ -13,7 +13,12 @@ from .config import Config
 
 # Ecosystem/language knowledge lives in one place (languages.py). Re-exported here
 # because that's where checks and tests have always imported Ecosystem from.
-from .languages import Ecosystem, detect_ecosystems  # noqa: F401
+from .languages import (  # noqa: F401
+    Artifact,
+    Ecosystem,
+    detect_artifacts,
+    detect_ecosystems,
+)
 
 CACHE_DIR = Path.home() / ".cache" / "housekeeping"
 
@@ -142,6 +147,10 @@ class RepoContext:
     @cached_property
     def ecosystems(self) -> list[Ecosystem]:
         return detect_ecosystems(self.workdir)
+
+    @cached_property
+    def artifacts(self) -> list[Artifact]:
+        return detect_artifacts(self.workdir)
 
 
 def local_checkout_for(repo: str) -> Path | None:
