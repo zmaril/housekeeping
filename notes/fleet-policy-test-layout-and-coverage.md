@@ -239,6 +239,12 @@ crates would be dishonest** — it must be explicitly scoped and marked as a gap
 
 ### Recommendation — **adopt-advisory**
 
+> **Superseded — see [Review decision (2026-07-09)](#review-decision-2026-07-09).** The
+> check was accepted but **narrowed to presence-only**: it verifies a coverage tool is
+> *configured* per ecosystem, and does **not** report a %, enforce a floor, or read
+> `[coverage] min`. The threshold/percent shapes below are the original proposal, kept
+> as history.
+
 Add a **`coverage` check at `severity=recommended`**, explicitly following the
 `ci-green` advisory-first precedent: land it advisory, gate later. It **reports the
 %** and passes/warns without gating initially — **no floor, or a floor set below
@@ -310,3 +316,32 @@ Like `test-layout`, `coverage` grades the tree, so it is **not** a `MAIN_STATE_C
     and at what per-repo minimum?
   - Confirm we are **not** attempting patch coverage until the changed-files machinery
     is built as a separate piece of work.
+
+---
+
+## Review decision (2026-07-09)
+
+The note was reviewed and both policies decided. Recording the outcomes so the
+proposals above read as history, not open questions.
+
+- **Test layout — skip the mandate (accepted).** No enforcement check is built.
+  straitjacket's 1500-line file-size budget is already the real forcing function and
+  the only one that has actually fired; a rival housekeeping line count would
+  double-count the same lines. The **sanctioned remedy** when the budget bites is
+  disponent's sibling `foo/tests.rs` pattern — `#[cfg(test)] mod tests;` in `foo.rs`
+  with the body in `foo/tests.rs`, which keeps private access (`super::*` still
+  resolves) while moving the bulk out of the graded file. That is **documentation, not
+  a check** (the optional advisory `test-layout` lint sketched in Policy A is **not**
+  being built). See disponent `f60b19b` for the canonical extraction.
+
+- **Coverage — build an advisory presence check (accepted).** Scope is **narrowed from
+  the threshold-reporting proposal in Policy B to PRESENCE-ONLY.** The check verifies
+  only that *a coverage tool is configured* for each detected ecosystem — each repo
+  configures the specifics as makes sense. It does **not** measure a coverage %, does
+  **not** enforce a threshold, and does **not** do patch/changed-lines coverage (so the
+  binding-crate blind spot and the missing changed-files machinery both stop being
+  blockers — presence is cheap and honest to check). Default severity **`recommended`**,
+  following the `ci-green` advisory-first precedent, so it does not turn the fleet red
+  on landing (no repo wires coverage yet). Promotion to `required` remains a later,
+  per-repo move via `powderworks/housecaptain.toml [policy] locked` once repos wire it.
+  Implemented in a follow-up PR — see follow-up PR (`feat/coverage-presence-check`).
