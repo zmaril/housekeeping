@@ -2,6 +2,21 @@
 
 Notable changes to housekeeping, newest first.
 
+## v0.20.0 — 2026-07-09
+
+- New **`coverage`** check (recommended, advisory): every detected language
+  ecosystem (rust, js, python) must have *some* coverage tool wired up —
+  presence-only, not a percentage or threshold. It accepts a range of signals so
+  each repo configures as it likes: a coverage config file (`codecov.yml`,
+  `.coveragerc`), a CI step or task-runner target (`cargo llvm-cov`, `tarpaulin`,
+  `grcov`, `bun test --coverage`, `c8`/`nyc`, `pytest-cov`), or a manifest
+  dependency. Skips when no rust/js/python ecosystem is present. Advisory
+  (`recommended`) by default following the `ci-green` advisory-first precedent, so
+  it warns rather than gating while repos wire coverage; promote per-repo to
+  `required` via `powderworks/housecaptain.toml [policy] locked` later. No patch /
+  changed-lines coverage — that machinery doesn't exist yet. See the design note
+  `notes/fleet-policy-test-layout-and-coverage.md`.
+
 ## v0.19.0 — 2026-07-08
 
 - **Per-repo `only` targeting** for `[[policy.managed-config]]`: an optional

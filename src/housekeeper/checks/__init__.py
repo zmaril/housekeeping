@@ -13,6 +13,7 @@ from . import (  # noqa: F401
     retry_masking,
     typecheck,
     builds,
+    coverage,
     codegen,
     dependabot,
     secret_scanning,
