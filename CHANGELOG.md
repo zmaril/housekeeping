@@ -19,6 +19,14 @@ Notable changes to housekeeping, newest first.
 
 ## 2026-07-18
 
+- New `housekeeper new <name> --flavor rust|bun|python` command: scaffolds a
+  fleet-compliant repo skeleton — CI/housekeeping workflows, committed git
+  hooks, a `.housekeeping.toml` carrying the fleet declaration, LICENSE,
+  `scripts/dev.sh`, dependabot config, CODEOWNERS, and `notes/design.md` — then
+  prints what it created and the human next steps it can't do itself: creating
+  the repo on GitHub, turning on branch protection, running `dev.sh` once to
+  generate the lockfile, and letting the captain sync the managed lint configs.
+  A CLI command only: no check verdicts and no `@v1` Action behavior change.
 - New `housekeeper detect` command: prints the repo's detected ecosystems,
   typed-language layers, and the build artifacts it produces, plus the
   recommended fleet setup per ecosystem (`--json` for machine output). Backed by
