@@ -18,6 +18,7 @@ DEFAULT_SEVERITY = {
     "ci-scheduled-run": "recommended",
     "ci-job-timeout": "recommended",
     "reproducible-toolchain": "required",
+    "pinned-versions": "recommended",
     "test-retry-masking": "recommended",
     "ci-green": "required",
     "typecheck": "required",

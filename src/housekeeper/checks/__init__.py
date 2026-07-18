@@ -10,6 +10,7 @@ from . import (  # noqa: F401
     ci_scheduled_run,
     ci_job_timeout,
     reproducible_toolchain,
+    pinned_versions,
     retry_masking,
     typecheck,
     builds,
