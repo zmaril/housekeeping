@@ -269,6 +269,22 @@ It needs `enabled = true` too, and only actually gates on green CI when the repo
 has required status checks registered; `housekeeper fix dependabot-automerge`
 writes the workflow.
 
+The `repo-meta` check reads its declaration not from `.housekeeping.toml` but from
+the README itself, via two invisible HTML-comment markers at the top of the file:
+
+```markdown
+<!-- housekeeper:description One-line tagline goes here. -->
+<!-- housekeeper:topics rust, cli, codegen -->
+```
+
+The README is the source of truth: the check asserts GitHub's actual description and
+topics match what the markers declare (topics are lowercased and must be
+`[a-z0-9-]`, ≤50 chars each, ≤20 total — GitHub's own rules). `housekeeper fix
+repo-meta` pushes the README-declared values to GitHub (needs an admin token — a 403
+prints how to set them by hand); when a repo has no markers yet, the same fix seeds
+them into the README from GitHub's current description/topics, so adopting the
+convention is one `fix` away.
+
 `pinned-versions` (recommended) flags floating version specifiers per detected
 ecosystem so a dependency can't silently drift: npm/bun and python and ruby want
 an exact version (`1.2.3`, `==1.2.3`, `= 1.2.3`), actions want a 40-char commit

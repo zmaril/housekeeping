@@ -2,6 +2,22 @@
 
 Notable changes to housekeeping, newest first.
 
+## v0.30.0 — 2026-07-18
+
+- **`repo-meta` now reconciles against a README declaration** (behavior change).
+  The repo's description (tagline) and topics (tags) are declared invisibly at the
+  top of the README via `<!-- housekeeper:description ... -->` and
+  `<!-- housekeeper:topics a, b, c -->` markers, and the check asserts GitHub's
+  actual values match them (README = source of truth). Topics are validated to
+  GitHub's rules (lowercase `[a-z0-9-]`, ≤50 chars each, ≤20 total). The check now
+  needs a clone as well as the API, and its verdict changed: a repo with no markers
+  now **fails** with an adoption nudge instead of passing on mere presence.
+  `housekeeper fix repo-meta` pushes the README-declared values to GitHub (needs an
+  admin token; a 403 prints how to set them by hand), or - when a repo has no markers
+  yet - seeds them into the README from GitHub's current description/topics. This is
+  an Action-behavior change, so it needs a release bump (Zack cuts releases), and
+  every repo must add the markers - the fix seeds them from the current values.
+
 ## v0.29.0 — 2026-07-18
 
 - **Nested-aware ecosystem detection.** `detect_ecosystems` now returns one
