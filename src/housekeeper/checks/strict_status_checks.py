@@ -21,6 +21,7 @@ from __future__ import annotations
 from ..context import GhError, RepoContext
 from ..fixing import confirm, console
 from ..registry import check, failed, fix_for, passed, skipped
+from .rulesets import default_branch_ruleset, put_ruleset
 
 
 def strict_flag(ctx: RepoContext) -> tuple[bool, bool, bool]:
@@ -94,20 +95,9 @@ def strict_status_checks(ctx: RepoContext):
     )
 
 
-def _default_branch_ruleset(ctx: RepoContext) -> dict | None:
-    for summary in ctx.api(f"repos/{ctx.repo}/rulesets") or []:
-        full = ctx.api(f"repos/{ctx.repo}/rulesets/{summary['id']}")
-        include = ((full.get("conditions") or {}).get("ref_name") or {}).get(
-            "include"
-        ) or []
-        if full.get("enforcement") == "active" and "~DEFAULT_BRANCH" in include:
-            return full
-    return None
-
-
 @fix_for("strict-status-checks")
 def fix(ctx: RepoContext):
-    ruleset = _default_branch_ruleset(ctx)
+    ruleset = default_branch_ruleset(ctx)
     if ruleset is None:
         console.print(
             "[yellow]no active default-branch ruleset — run the branch-protection fix "
@@ -146,17 +136,7 @@ def fix(ctx: RepoContext):
             entry["parameters"] = params
         rules.append(entry)
     try:
-        ctx.api(
-            f"repos/{ctx.repo}/rulesets/{ruleset['id']}",
-            method="PUT",
-            input={
-                "name": ruleset["name"],
-                "target": ruleset.get("target", "branch"),
-                "enforcement": "active",
-                "conditions": ruleset["conditions"],
-                "rules": rules,
-            },
-        )
+        put_ruleset(ctx, ruleset, rules)
         ctx.api(
             f"repos/{ctx.repo}",
             method="PATCH",

@@ -15,6 +15,7 @@ from ..context import RepoContext
 from ..fixing import confirm, console
 from ..registry import check, failed, fix_for, passed, skipped
 from .ci import parse_workflow, triggers, workflow_files
+from .rulesets import default_branch_ruleset, put_ruleset
 
 
 def required_contexts(ctx: RepoContext) -> tuple[bool, set[str]]:
@@ -89,24 +90,13 @@ def required_checks(ctx: RepoContext):
     )
 
 
-def _default_branch_ruleset(ctx: RepoContext) -> dict | None:
-    for summary in ctx.api(f"repos/{ctx.repo}/rulesets") or []:
-        full = ctx.api(f"repos/{ctx.repo}/rulesets/{summary['id']}")
-        include = ((full.get("conditions") or {}).get("ref_name") or {}).get(
-            "include"
-        ) or []
-        if full.get("enforcement") == "active" and "~DEFAULT_BRANCH" in include:
-            return full
-    return None
-
-
 @fix_for("required-checks")
 def fix(ctx: RepoContext):
     jobs = sorted(pr_check_jobs(ctx.workdir))
     if not jobs:
         console.print("[yellow]no PR checks to require[/yellow]")
         return
-    ruleset = _default_branch_ruleset(ctx)
+    ruleset = default_branch_ruleset(ctx)
     if ruleset is None:
         console.print(
             "[yellow]no active default-branch ruleset — run the branch-protection fix "
@@ -143,15 +133,5 @@ def fix(ctx: RepoContext):
             },
         }
     )
-    ctx.api(
-        f"repos/{ctx.repo}/rulesets/{ruleset['id']}",
-        method="PUT",
-        input={
-            "name": ruleset["name"],
-            "target": ruleset.get("target", "branch"),
-            "enforcement": "active",
-            "conditions": ruleset["conditions"],
-            "rules": rules,
-        },
-    )
+    put_ruleset(ctx, ruleset, rules)
     console.print("[green]Required status checks set.[/green]")
