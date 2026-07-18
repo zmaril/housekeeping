@@ -16,6 +16,12 @@ RUBY = ECOSYSTEMS["ruby"]
 BUN = ECOSYSTEMS["bun"]
 
 
+def test_bun_lock_check_ignores_scripts():
+    # --dry-run alone still runs postinstall; --ignore-scripts avoids a false
+    # "out of sync" when a repo's postinstall needs network/tools (offline exit 127).
+    assert "--ignore-scripts" in ECOSYSTEMS["bun"].lock_check
+
+
 def repo(tmp_path, workflow_text, ecosystems=(), config=None, scripts=None):
     workflows = tmp_path / ".github" / "workflows"
     workflows.mkdir(parents=True, exist_ok=True)
