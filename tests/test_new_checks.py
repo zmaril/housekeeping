@@ -1,3 +1,4 @@
+from dataclasses import replace
 from types import SimpleNamespace
 
 from housekeeper.checks.gitignore import gitignore
@@ -95,3 +96,46 @@ def test_gitignore_covered_passes(tmp_path):
 def test_gitignore_no_known_junk_skips(tmp_path):
     ctx = SimpleNamespace(workdir=tmp_path, ecosystems=[ECOSYSTEMS["go"]])
     assert gitignore(ctx).status == Status.SKIP
+
+
+def nested_ctx(tmp_path, *ecos):
+    return SimpleNamespace(workdir=tmp_path, ecosystems=list(ecos))
+
+
+def test_gitignore_nested_file_covers_passes(tmp_path):
+    # A nested ecosystem whose build junk is ignored by a `.gitignore` in its own
+    # directory passes — git applies that file, so the junk genuinely is ignored.
+    eco = replace(ECOSYSTEMS["bun"], dir="crates/x-node")
+    (tmp_path / "crates" / "x-node").mkdir(parents=True)
+    (tmp_path / "crates" / "x-node" / ".gitignore").write_text("node_modules/\n")
+    assert gitignore(nested_ctx(tmp_path, eco)).status == Status.PASS
+
+
+def test_gitignore_root_file_covers_nested_passes(tmp_path):
+    # A pattern in the root `.gitignore` covers a nested ecosystem — a parent
+    # ignore is inherited by every child directory.
+    eco = replace(ECOSYSTEMS["bun"], dir="crates/x-node")
+    (tmp_path / "crates" / "x-node").mkdir(parents=True)
+    (tmp_path / ".gitignore").write_text("node_modules/\n")
+    assert gitignore(nested_ctx(tmp_path, eco)).status == Status.PASS
+
+
+def test_gitignore_uncovered_anywhere_fails_with_dir(tmp_path):
+    # Covered nowhere on the path from root to the instance's dir -> FAIL, naming
+    # the pattern and the dir where it's missing.
+    eco = replace(ECOSYSTEMS["bun"], dir="crates/x-node")
+    (tmp_path / "crates" / "x-node").mkdir(parents=True)
+    (tmp_path / ".gitignore").write_text("*.log\n")
+    result = gitignore(nested_ctx(tmp_path, eco))
+    assert result.status == Status.FAIL
+    assert "node_modules/" in result.details
+    assert "crates/x-node" in result.details
+
+
+def test_gitignore_no_root_file_but_nested_covers_passes(tmp_path):
+    # No root `.gitignore` at all, but a nested one covers everything -> PASS.
+    eco = replace(ECOSYSTEMS["bun"], dir="crates/x-node")
+    (tmp_path / "crates" / "x-node").mkdir(parents=True)
+    (tmp_path / "crates" / "x-node" / ".gitignore").write_text("node_modules/\n")
+    assert not (tmp_path / ".gitignore").exists()
+    assert gitignore(nested_ctx(tmp_path, eco)).status == Status.PASS

@@ -129,3 +129,40 @@ def test_native_tool_absent_falls_back_to_heuristic(tmp_path, monkeypatch):
 def test_no_lockfile_ecosystems_skips(tmp_path):
     result = lockfiles(ctx_for(tmp_path, []))
     assert result.status == Status.SKIP
+
+
+def test_nested_lockfile_committed_passes(tmp_path):
+    # A nested ruby package's Gemfile.lock lives at crates/x-ruby/Gemfile.lock;
+    # the check must find it there, not at the repo root (no false "missing").
+    from dataclasses import replace
+
+    init_repo(tmp_path)
+    (tmp_path / "crates" / "x-ruby").mkdir(parents=True)
+    (tmp_path / "crates/x-ruby/Gemfile").write_text("source 'https://rubygems.org'\n")
+    (tmp_path / "crates/x-ruby/Gemfile.lock").write_text("GEM\n")
+    commit(
+        tmp_path,
+        ["crates/x-ruby/Gemfile", "crates/x-ruby/Gemfile.lock"],
+        EARLY,
+        "add nested ruby deps",
+    )
+
+    eco = replace(ECOSYSTEMS["ruby"], dir="crates/x-ruby")
+    result = lockfiles(ctx_for(tmp_path, [eco]))
+    assert result.status == Status.PASS, result.details
+    assert "git history" in result.details
+
+
+def test_missing_nested_lockfile_fails_naming_dir(tmp_path):
+    from dataclasses import replace
+
+    init_repo(tmp_path)
+    (tmp_path / "crates" / "x-ruby").mkdir(parents=True)
+    (tmp_path / "crates/x-ruby/Gemfile").write_text("source 'https://rubygems.org'\n")
+    commit(tmp_path, ["crates/x-ruby/Gemfile"], EARLY, "manifest only, no lock")
+
+    eco = replace(ECOSYSTEMS["ruby"], dir="crates/x-ruby")
+    result = lockfiles(ctx_for(tmp_path, [eco]))
+    assert result.status == Status.FAIL
+    assert "missing" in result.details
+    assert "ruby (crates/x-ruby)" in result.details

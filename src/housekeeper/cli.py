@@ -229,6 +229,7 @@ def _detection_payload(workdir: Path) -> dict:
         "ecosystems": [
             {
                 "name": e.name,
+                "dir": e.dir,
                 "language": e.language,
                 "lockfile": e.lockfile,
                 "recommends": list(e.recommends),
@@ -262,7 +263,8 @@ def render_detect(payload: dict) -> None:
         + (
             ", ".join(
                 f"{e['name']}"
-                + (f" ({e['language']})" if e["language"] else "")
+                + (f" ({e['dir']})" if e.get("dir") else "")
+                + (f" [{e['language']}]" if e["language"] else "")
                 + (f" -> {e['lockfile']}" if e["lockfile"] else "")
                 for e in ecos
             )

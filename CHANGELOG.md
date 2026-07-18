@@ -2,6 +2,36 @@
 
 Notable changes to housekeeping, newest first.
 
+## v0.29.0 — 2026-07-18
+
+- **Nested-aware ecosystem detection.** `detect_ecosystems` now returns one
+  `Ecosystem` instance per location — each carrying its `dir` relative to the
+  repo root — instead of probing only the repo root. A Rust workspace's node
+  package under `crates/*-node`, its `crates/*-python` uv package, its
+  `crates/*-ruby` bundler package, and any other nested manifest are finally
+  detected. cargo anchors on `Cargo.lock` locations (a workspace shares one lock;
+  member crates aren't emitted separately, and a lockless rust repo still gets
+  flagged at its topmost `Cargo.toml`); npm-family picks its manager by the
+  lockfile in the SAME directory. **Verdict change** across several checks, which
+  now grade nested packages per-directory:
+  - `lockfiles` finds each lockfile at `workdir/<dir>/<lockfile>`, runs the native
+    tool in that directory, and labels every line with the dir
+    (`bun (crates/entl-node): ...`).
+  - `dependabot` gains a per-`(ecosystem, directory)` coverage model: a nested
+    package demands an `updates` entry at ITS directory (exact, or a `/crates/*`
+    / `/crates/**` `directories` glob), and the fix emits the correct
+    `directory:` per missing pair instead of a hardcoded `/`.
+  - `ci-exists` and `coverage` see nested languages in their demanded-language
+    set (the ci-exists fix dedups templated ecosystems by name).
+  - `gitignore` requires the deduped set of build-junk patterns across all
+    instances in the root `.gitignore` (git ignore is recursive, so root covers
+    nested).
+
+  So repos with nested packages (entl, disponent) that previously passed on
+  root-only detection may now fail for genuinely-ungraded nested lockfiles,
+  dependabot coverage, or CI. Closes #90. New verdicts, so this needs a release
+  bump (Zack cuts releases).
+
 ## 2026-07-18
 
 - `housekeeper new` gains an opt-in `--dependabot-automerge` flag. Off by default,

@@ -280,6 +280,10 @@ class Ecosystem:
         None  # how pinned-versions judges this ecosystem's specifiers
     )
     recommends: tuple[str, ...] = ()  # recommended fleet setup for this ecosystem
+    dir: str = ""  # directory of this instance, relative to the repo root ("" = root)
+    # `dir` is keyword-defaulted and comes last so positional construction is
+    # unaffected. Registry entries below are templates and always leave it "";
+    # detect_ecosystems stamps the real per-location dir via `replace(..., dir=...)`.
 
 
 # ---- Recommended fleet setup per ecosystem (inspectable, not buried in a check) ----
@@ -438,43 +442,104 @@ ECOSYSTEMS: dict[str, Ecosystem] = {
 }
 
 
+# Vendored/generated trees whose manifests aren't the repo's own; hidden dirs
+# (leading dot) are skipped on top of these. Shared by detect_ecosystems and the
+# tree-walking checks so the copied skip-dir walks stop drifting apart.
+_NESTED_SKIP_DIRS = {
+    "node_modules",
+    "vendor",
+    "target",
+    "dist",
+    "build",
+    "__pycache__",
+}
+
+
+def nested_manifests(workdir: Path, filename: str) -> list[Path]:
+    """Every `filename` anywhere under `workdir` (sorted), skipping hidden dirs and
+    vendored/build trees, so a dependency's own manifest never counts as the repo's.
+    The single tree-walk detection and the checks share for finding nested manifests."""
+    out: list[Path] = []
+    for path in sorted(workdir.rglob(filename)):
+        parts = path.relative_to(workdir).parts[:-1]
+        if any(p.startswith(".") or p in _NESTED_SKIP_DIRS for p in parts):
+            continue
+        out.append(path)
+    return out
+
+
+def _reldir(workdir: Path, manifest: Path) -> str:
+    """Directory of a manifest relative to the repo root, "" at the root."""
+    rel = manifest.parent.relative_to(workdir).as_posix()
+    return "" if rel == "." else rel
+
+
 def detect_ecosystems(workdir: Path) -> list[Ecosystem]:
-    """Which ecosystems this repo uses, from its manifest/lockfile files. Returns the
-    shared registry entries (immutable), so every check sees the same facts."""
+    """Which ecosystems this repo uses and WHERE, from its manifest/lockfile files.
+
+    Nested-aware: emits one Ecosystem instance per location (a Rust workspace's
+    ``crates/*-node`` npm package, ``crates/*-python`` uv package, and so on), each
+    stamped with its directory relative to the repo root via ``replace(..., dir=...)``.
+    A consumer reads the lockfile at ``workdir / eco.dir / eco.lockfile`` rather than
+    assuming the root. The ``ECOSYSTEMS`` registry entries are templates (``dir=""``);
+    this is the only place a real dir is set. Instances come back sorted by
+    ``(name, dir)`` for a stable order."""
     found: list[Ecosystem] = []
 
-    if (workdir / "Cargo.toml").is_file():
-        found.append(ECOSYSTEMS["cargo"])
-
-    if (workdir / "package.json").is_file():
-        if (workdir / "bun.lock").is_file() or (workdir / "bun.lockb").is_file():
+    # npm-family: one instance per package.json, manager picked by the lockfile in
+    # the SAME directory (the nested lock, not the repo root's).
+    for pkg in nested_manifests(workdir, "package.json"):
+        d = pkg.parent
+        reldir = _reldir(workdir, pkg)
+        if (d / "bun.lock").is_file() or (d / "bun.lockb").is_file():
             bun = ECOSYSTEMS["bun"]
-            if not (workdir / "bun.lock").is_file():
+            if not (d / "bun.lock").is_file():
                 bun = replace(bun, lockfile="bun.lockb")
-            found.append(bun)
-        elif (workdir / "pnpm-lock.yaml").is_file():
-            found.append(ECOSYSTEMS["pnpm"])
-        elif (workdir / "yarn.lock").is_file():
-            found.append(ECOSYSTEMS["yarn"])
+            found.append(replace(bun, dir=reldir))
+        elif (d / "pnpm-lock.yaml").is_file():
+            found.append(replace(ECOSYSTEMS["pnpm"], dir=reldir))
+        elif (d / "yarn.lock").is_file():
+            found.append(replace(ECOSYSTEMS["yarn"], dir=reldir))
         else:
-            found.append(ECOSYSTEMS["npm"])
+            found.append(replace(ECOSYSTEMS["npm"], dir=reldir))
 
-    if (workdir / "pyproject.toml").is_file():
-        # No lock yet or a uv.lock present — either way assume uv, the house style.
-        found.append(ECOSYSTEMS["uv"])
-    elif (workdir / "requirements.txt").is_file():
-        found.append(ECOSYSTEMS["pip"])
+    # python: each pyproject.toml -> uv (house style); a requirements.txt with no
+    # sibling pyproject -> pip.
+    for pyproject in nested_manifests(workdir, "pyproject.toml"):
+        found.append(replace(ECOSYSTEMS["uv"], dir=_reldir(workdir, pyproject)))
+    for reqs in nested_manifests(workdir, "requirements.txt"):
+        if not (reqs.parent / "pyproject.toml").is_file():
+            found.append(replace(ECOSYSTEMS["pip"], dir=_reldir(workdir, reqs)))
 
-    if (workdir / "Gemfile").is_file():
-        found.append(ECOSYSTEMS["ruby"])
+    # ruby: each Gemfile.
+    for gemfile in nested_manifests(workdir, "Gemfile"):
+        found.append(replace(ECOSYSTEMS["ruby"], dir=_reldir(workdir, gemfile)))
 
-    if (workdir / "go.mod").is_file():
-        found.append(ECOSYSTEMS["go"])
+    # go: each go.mod.
+    for gomod in nested_manifests(workdir, "go.mod"):
+        found.append(replace(ECOSYSTEMS["go"], dir=_reldir(workdir, gomod)))
 
+    # cargo: anchor on Cargo.lock, NOT every Cargo.toml. A workspace shares ONE lock
+    # at its root and member crates carry only a Cargo.toml; emitting per-member
+    # would make lockfiles hunt a per-member lock that never exists. Edge case: a
+    # lockless rust repo (a Cargo.toml but no Cargo.lock anywhere) still gets flagged
+    # at its topmost Cargo.toml dir.
+    locks = nested_manifests(workdir, "Cargo.lock")
+    if locks:
+        for lock in locks:
+            found.append(replace(ECOSYSTEMS["cargo"], dir=_reldir(workdir, lock)))
+    else:
+        tomls = nested_manifests(workdir, "Cargo.toml")
+        if tomls:
+            topmost = min(tomls, key=lambda p: len(p.parent.relative_to(workdir).parts))
+            found.append(replace(ECOSYSTEMS["cargo"], dir=_reldir(workdir, topmost)))
+
+    # github-actions: repo-level, exactly one instance at the root.
     workflows = workdir / ".github" / "workflows"
     if workflows.is_dir() and any(workflows.glob("*.y*ml")):
         found.append(ECOSYSTEMS["github-actions"])
 
+    found.sort(key=lambda e: (e.name, e.dir))
     return found
 
 

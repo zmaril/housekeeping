@@ -20,6 +20,17 @@ from ..registry import check, failed, fix_for, passed, skipped
 # (languages.py) — read them off `eco.lock_check` / `eco.lock_regen` / `eco.tool`.
 
 
+def _label(eco) -> str:
+    """The ecosystem's name, tagged with its directory when it isn't the root, so a
+    problem/ok line reads `bun (crates/entl-node): ...` for a nested package."""
+    return f"{eco.name} ({eco.dir})" if eco.dir else eco.name
+
+
+def _rel(eco, filename: str) -> str:
+    """A repo-relative posix path for a file in the ecosystem's directory, for git."""
+    return (Path(eco.dir) / filename).as_posix() if eco.dir else filename
+
+
 def tracked(workdir: Path, filename: str) -> bool:
     proc = run(["git", "ls-files", "--error-unmatch", filename], cwd=workdir)
     return proc.returncode == 0
@@ -59,17 +70,19 @@ def lockfiles(ctx: RepoContext):
         lockfile = eco.lockfile
         if lockfile is None:  # relevant is pre-filtered; this narrows the type
             continue
-        lock = ctx.workdir / lockfile
+        label = _label(eco)
+        lock_rel = _rel(eco, lockfile)
+        lock = ctx.workdir / eco.dir / lockfile
         if not lock.is_file():
-            problems.append(f"{eco.name}: {lockfile} missing")
+            problems.append(f"{label}: {lockfile} missing")
             continue
-        if not tracked(ctx.workdir, lockfile):
-            if gitignored(ctx.workdir, lockfile):
+        if not tracked(ctx.workdir, lock_rel):
+            if gitignored(ctx.workdir, lock_rel):
                 problems.append(
-                    f"{eco.name}: {lockfile} exists but is gitignored - commit it"
+                    f"{label}: {lockfile} exists but is gitignored - commit it"
                 )
             else:
-                problems.append(f"{eco.name}: {lockfile} exists but is not committed")
+                problems.append(f"{label}: {lockfile} exists but is not committed")
             continue
         native = (
             bool(eco.lock_check)
@@ -77,24 +90,25 @@ def lockfiles(ctx: RepoContext):
             and shutil.which(eco.tool) is not None
         )
         if native:
-            proc = run(list(eco.lock_check), cwd=ctx.workdir)
+            # The native tool must run in the package dir, where its manifest lives.
+            proc = run(list(eco.lock_check), cwd=ctx.workdir / eco.dir)
             if proc.returncode != 0:
                 problems.append(
-                    f"{eco.name}: {eco.lockfile} out of sync with {eco.manifest}"
+                    f"{label}: {eco.lockfile} out of sync with {eco.manifest}"
                 )
             else:
-                native_ok.append(eco.name)
+                native_ok.append(label)
             continue
-        stale = manifest_newer(ctx.workdir, eco.manifest, lockfile)
+        stale = manifest_newer(ctx.workdir, _rel(eco, eco.manifest), lock_rel)
         if stale is True:
             problems.append(
-                f"{eco.name}: {eco.manifest} committed after {lockfile} - "
+                f"{label}: {eco.manifest} committed after {lockfile} - "
                 "likely stale (git-history heuristic; regenerate the lockfile)"
             )
         elif stale is False:
-            heuristic_ok.append(eco.name)
+            heuristic_ok.append(label)
         else:
-            unverified.append(f"{eco.name} (no native check; git history unreadable)")
+            unverified.append(f"{label} (no native check; git history unreadable)")
 
     note = f"sync unverified for: {', '.join(unverified)}" if unverified else ""
     if problems:
@@ -114,10 +128,13 @@ def fix(ctx: RepoContext):
     for eco in ctx.ecosystems:
         if not eco.lockfile:
             continue
-        lock = ctx.workdir / eco.lockfile
+        lock = ctx.workdir / eco.dir / eco.lockfile
         if not eco.lock_check or not eco.tool or not shutil.which(eco.tool):
             continue
-        if not lock.is_file() or run(list(eco.lock_check), cwd=ctx.workdir).returncode:
+        if (
+            not lock.is_file()
+            or run(list(eco.lock_check), cwd=ctx.workdir / eco.dir).returncode
+        ):
             stale.append(eco)
     if not stale:
         console.print(
@@ -131,19 +148,19 @@ def fix(ctx: RepoContext):
             lockfile = eco.lockfile
             if lockfile is None:
                 continue
-            proc = run(list(eco.lock_regen), cwd=workdir)
+            proc = run(list(eco.lock_regen), cwd=workdir / eco.dir)
             if proc.returncode != 0:
                 console.print(
-                    f"[red]{eco.name} regen failed:[/red] {proc.stderr.strip()[:500]}"
+                    f"[red]{_label(eco)} regen failed:[/red] {proc.stderr.strip()[:500]}"
                 )
                 continue
-            changed.append(workdir / lockfile)
+            changed.append(workdir / eco.dir / lockfile)
         return changed
 
     apply_file_fix(
         ctx,
         "lockfiles",
-        describe=f"regenerate lockfiles for: {', '.join(e.name for e in stale)}",
+        describe=f"regenerate lockfiles for: {', '.join(_label(e) for e in stale)}",
         why="a committed, in-sync lockfile means every machine and CI run installs "
         "the exact same versions — out-of-sync lockfiles are how 'works on my "
         "machine' happens",
