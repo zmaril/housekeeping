@@ -162,10 +162,29 @@ def templated_ecosystems(ecosystems) -> list:
 
 @fix_for("ci-exists")
 def fix(ctx: RepoContext):
+    from ..fixing import console
+
+    # ci-exists fails two very different ways: no CI at all, or CI that exists but
+    # is missing a test/lint/fmt step. Scaffolding only answers the first. On a repo
+    # that already has workflows it would overwrite a hand-written ci.yml — the
+    # exact CI this check is asking to *extend* — so refuse and say what's missing.
+    existing = workflow_files(ctx.workdir)
+    if existing:
+        console.print(
+            "[yellow]this repo already has "
+            f"{len(existing)} workflow(s): {', '.join(p.name for p in existing)}.[/yellow]\n"
+            "Scaffolding ci.yml would overwrite them, so this fix stops here — the "
+            "missing steps have to be added to the existing workflow by hand."
+        )
+        missing = [p for p in ci_exists(ctx).details.split("; ") if " no " in p]
+        if missing:
+            console.print("\nWhat this repo is missing:")
+            for problem in missing:
+                console.print(f"  - {problem}")
+        return
+
     templated = templated_ecosystems(ctx.ecosystems)
     if not templated:
-        from ..fixing import console
-
         console.print(
             "[yellow]no ecosystem with a CI template detected — write the workflow by hand[/yellow]"
         )

@@ -9,12 +9,29 @@ were natively verified versus only checked by the heuristic.
 
 from __future__ import annotations
 
+import json
 import shutil
+import tomllib
 from pathlib import Path
 
 from ..context import RepoContext, run
 from ..fixing import apply_file_fix, console
 from ..registry import check, failed, fix_for, passed, skipped
+
+# Manifest keys that hold dependencies, per manifest filename. A package whose
+# manifest declares none of these can't have a lockfile: bun deletes an empty one
+# outright ("No packages! Deleted empty lockfile"), and npm/uv would only write a
+# stub pinning nothing. Demanding one there is unsatisfiable, so such a package is
+# skipped rather than failed.
+DEPENDENCY_KEYS: dict[str, tuple[str, ...]] = {
+    "package.json": (
+        "dependencies",
+        "devDependencies",
+        "peerDependencies",
+        "optionalDependencies",
+    ),
+    "Cargo.toml": ("dependencies", "dev-dependencies", "build-dependencies"),
+}
 
 # The sync-check / regen commands and the tool binary now live on the Ecosystem
 # (languages.py) — read them off `eco.lock_check` / `eco.lock_regen` / `eco.tool`.
@@ -29,6 +46,47 @@ def _label(eco) -> str:
 def _rel(eco, filename: str) -> str:
     """A repo-relative posix path for a file in the ecosystem's directory, for git."""
     return (Path(eco.dir) / filename).as_posix() if eco.dir else filename
+
+
+def declares_dependencies(manifest_path: Path, manifest_name: str) -> bool | None:
+    """Whether a manifest declares any dependency.
+
+    Returns None when it can't be determined — an unparseable or unrecognized
+    manifest defaults to "assume it has dependencies", so an unreadable file
+    never silently downgrades the check.
+    """
+    if not manifest_path.is_file():
+        return None
+    try:
+        if manifest_name == "package.json":
+            data = json.loads(manifest_path.read_text())
+        elif manifest_name in ("Cargo.toml", "pyproject.toml"):
+            data = tomllib.loads(manifest_path.read_text())
+        else:
+            return None
+    except (json.JSONDecodeError, tomllib.TOMLDecodeError, OSError):
+        return None
+    if not isinstance(data, dict):
+        return None
+
+    if manifest_name == "pyproject.toml":
+        project = data.get("project", {})
+        poetry = data.get("tool", {}).get("poetry", {})
+        buckets = [
+            project.get("dependencies"),
+            project.get("optional-dependencies"),
+            data.get("dependency-groups"),
+            # poetry always lists `python` itself, so it counts only past one entry
+            {
+                k: v
+                for k, v in (poetry.get("dependencies") or {}).items()
+                if k != "python"
+            },
+            poetry.get("group"),
+        ]
+        return any(bool(b) for b in buckets)
+
+    return any(bool(data.get(key)) for key in DEPENDENCY_KEYS.get(manifest_name, ()))
 
 
 def tracked(workdir: Path, filename: str) -> bool:
@@ -65,15 +123,36 @@ def lockfiles(ctx: RepoContext):
     if not relevant:
         return skipped("no ecosystems with lockfiles detected")
 
+    # A repo can exempt directories it deliberately keeps lockfile-free, e.g. a
+    # scratch/spike package, or one whose lockfile is intentionally gitignored:
+    #   [lockfiles]
+    #   ignore = ["spike", "crates/demo"]
+    ignored_dirs = {
+        str(d).strip("/") for d in ctx.config.section("lockfiles").get("ignore", [])
+    }
+
     problems, unverified, native_ok, heuristic_ok = [], [], [], []
+    skipped_pkgs = []
     for eco in relevant:
         lockfile = eco.lockfile
         if lockfile is None:  # relevant is pre-filtered; this narrows the type
             continue
         label = _label(eco)
+        if str(eco.dir).strip("/") in ignored_dirs:
+            skipped_pkgs.append(f"{label} (ignored by config)")
+            continue
         lock_rel = _rel(eco, lockfile)
         lock = ctx.workdir / eco.dir / lockfile
         if not lock.is_file():
+            # No lockfile *and* no dependencies to lock: unsatisfiable, not a failure.
+            if (
+                declares_dependencies(
+                    ctx.workdir / eco.dir / eco.manifest, eco.manifest
+                )
+                is False
+            ):
+                skipped_pkgs.append(f"{label} (no dependencies declared)")
+                continue
             problems.append(f"{label}: {lockfile} missing")
             continue
         if not tracked(ctx.workdir, lock_rel):
@@ -110,7 +189,13 @@ def lockfiles(ctx: RepoContext):
         else:
             unverified.append(f"{label} (no native check; git history unreadable)")
 
-    note = f"sync unverified for: {', '.join(unverified)}" if unverified else ""
+    notes = []
+    if unverified:
+        notes.append(f"sync unverified for: {', '.join(unverified)}")
+    # Never let a skip pass silently — a skipped package still shows up in the note.
+    if skipped_pkgs:
+        notes.append(f"not graded: {', '.join(skipped_pkgs)}")
+    note = "; ".join(notes)
     if problems:
         return failed("; ".join(problems), note)
     parts = []
