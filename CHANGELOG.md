@@ -2,6 +2,21 @@
 
 Notable changes to housekeeping, newest first.
 
+## v0.24.0 — 2026-07-18
+
+- New **recommended** `artifacts-built` check: for every build artifact
+  detection finds a repo produces (napi addon, PyO3/maturin wheel, Magnus/rb-sys
+  gem, Tauri app, web/site bundle, compiled binary), it greps the workflows for
+  the build step that artifact needs and reports the ones with no build
+  coverage. A heavy artifact (a Tauri bundle) is expected to build on a scheduled
+  workflow; the lighter per-PR gate stays the required `builds` check's job. It
+  is conservative — it matches workflow step/run text and resolves
+  `bun`/`npm`/`pnpm`/`yarn run <name>` against the scripts of every package.json
+  in the repo (nested included, so a `bun run build` that maps to `napi build` in
+  a sub-package resolves), but it never runs anything. Because static parsing is
+  imperfect it **warns rather than gates**. New check plus a new Action verdict:
+  an Action-behavior change, so it needs a release bump (Zack cuts releases).
+
 ## 2026-07-18
 
 - New `housekeeper detect` command: prints the repo's detected ecosystems,

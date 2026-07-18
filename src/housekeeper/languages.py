@@ -545,8 +545,8 @@ ARTIFACTS: dict[str, Artifact] = {
     "binary": Artifact(
         "binary",
         "compiled binary",
-        re.compile(r"(cargo build --release|cargo install|bun build --compile)", re.I),
-        guidance="build the release binary in CI",
+        re.compile(r"(cargo (build|install|test)|bun build --compile)", re.I),
+        guidance="build or test the binary in CI (cargo build/test, or bun build --compile)",
     ),
 }
 
