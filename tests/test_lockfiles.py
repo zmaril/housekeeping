@@ -166,3 +166,66 @@ def test_missing_nested_lockfile_fails_naming_dir(tmp_path):
     assert result.status == Status.FAIL
     assert "missing" in result.details
     assert "ruby (crates/x-ruby)" in result.details
+
+
+# --- zero-dependency packages and the [lockfiles] ignore escape hatch ---------
+#
+# Regression tests for v0.20.0: nested-aware detection started grading packages
+# that can't satisfy the check. A package with no dependencies has no lockfile to
+# produce (bun deletes an empty one outright), so demanding one is unsatisfiable.
+
+
+def config_with(ignore: list[str]) -> Config:
+    return Config({"lockfiles": {"ignore": ignore}})
+
+
+def ctx_with_config(tmp_path: Path, ecosystems: list, config: Config):
+    return SimpleNamespace(workdir=tmp_path, ecosystems=ecosystems, config=config)
+
+
+def test_zero_dependency_package_is_skipped_not_failed(tmp_path):
+    init_repo(tmp_path)
+    (tmp_path / "package.json").write_text('{"name": "site", "version": "0.0.0"}\n')
+    commit(tmp_path, ["package.json"], EARLY, "add dependency-free package")
+
+    result = lockfiles(ctx_for(tmp_path, [ECOSYSTEMS["npm"]]))
+    assert result.status == Status.PASS
+    # The skip is surfaced, never silent.
+    assert "no dependencies declared" in result.note
+
+
+def test_package_with_dependencies_still_fails_when_lockfile_missing(tmp_path):
+    init_repo(tmp_path)
+    (tmp_path / "package.json").write_text(
+        '{"name": "site", "dependencies": {"left-pad": "^1.0.0"}}\n'
+    )
+    commit(tmp_path, ["package.json"], EARLY, "add package with a dependency")
+
+    result = lockfiles(ctx_for(tmp_path, [ECOSYSTEMS["npm"]]))
+    assert result.status == Status.FAIL
+    assert "missing" in result.details
+
+
+def test_unparseable_manifest_is_not_treated_as_dependency_free(tmp_path):
+    """An unreadable manifest must not silently downgrade the check."""
+    init_repo(tmp_path)
+    (tmp_path / "package.json").write_text("{not json at all\n")
+    commit(tmp_path, ["package.json"], EARLY, "add broken manifest")
+
+    result = lockfiles(ctx_for(tmp_path, [ECOSYSTEMS["npm"]]))
+    assert result.status == Status.FAIL
+    assert "missing" in result.details
+
+
+def test_ignore_config_exempts_a_directory(tmp_path):
+    init_repo(tmp_path)
+    (tmp_path / "package.json").write_text(
+        '{"name": "site", "dependencies": {"left-pad": "^1.0.0"}}\n'
+    )
+    commit(tmp_path, ["package.json"], EARLY, "add package with a dependency")
+
+    result = lockfiles(
+        ctx_with_config(tmp_path, [ECOSYSTEMS["npm"]], config_with([""]))
+    )
+    assert result.status == Status.PASS
+    assert "ignored by config" in result.note
