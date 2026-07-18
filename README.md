@@ -223,6 +223,7 @@ housekeeper check zmaril/entl      # or named explicitly
 housekeeper check --only lockfiles,branch-protection
 housekeeper fix dependabot         # explain, confirm, then act
 housekeeper report                 # re-render the last run
+housekeeper detect                 # show detected ecosystems, artifacts, recommended setup
 ```
 
 `check` exits nonzero if any required check fails, so it can gate other

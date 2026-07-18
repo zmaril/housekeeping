@@ -16,6 +16,7 @@ from rich.table import Table
 
 from . import checks  # noqa: F401 — importing registers every check
 from .context import CACHE_DIR, GhError, RepoContext, repo_from_cwd
+from .languages import detect_artifacts, detect_ecosystems, detect_typed_languages
 from .registry import CHECKS, Result, Status
 
 console = Console()
@@ -218,6 +219,89 @@ def cmd_check(args) -> int:
             summary.write(render_markdown(payload) + "\n")
 
     return exit_code(payload)
+
+
+def _detection_payload(workdir: Path) -> dict:
+    """Pure detection over a working copy — what the repo contains and produces."""
+    ecosystems = detect_ecosystems(workdir)
+    artifacts = detect_artifacts(workdir)
+    return {
+        "ecosystems": [
+            {
+                "name": e.name,
+                "language": e.language,
+                "lockfile": e.lockfile,
+                "recommends": list(e.recommends),
+            }
+            for e in ecosystems
+        ],
+        "typed_languages": detect_typed_languages(workdir),
+        "artifacts": [
+            {
+                "name": a.name,
+                "label": a.label,
+                "heavy": a.heavy,
+                "guidance": a.guidance,
+            }
+            for a in artifacts
+        ],
+    }
+
+
+def detect_payload(repo: str) -> dict:
+    ctx = RepoContext(repo)
+    ctx.ensure_workdir()
+    return {"repo": repo, **_detection_payload(ctx.workdir)}
+
+
+def render_detect(payload: dict) -> None:
+    console.print(f"[bold]{payload['repo']}[/bold]")
+    ecos = payload["ecosystems"]
+    console.print(
+        "\n[bold]Ecosystems[/bold]: "
+        + (
+            ", ".join(
+                f"{e['name']}"
+                + (f" ({e['language']})" if e["language"] else "")
+                + (f" -> {e['lockfile']}" if e["lockfile"] else "")
+                for e in ecos
+            )
+            or "none detected"
+        )
+    )
+    typed = payload["typed_languages"]
+    console.print(
+        "[bold]Typed languages[/bold]: " + (", ".join(typed) or "none detected")
+    )
+    arts = payload["artifacts"]
+    console.print(
+        "[bold]Artifacts[/bold]: "
+        + (
+            ", ".join(a["label"] + (" [heavy]" if a["heavy"] else "") for a in arts)
+            or "none detected"
+        )
+    )
+    recommends = [(e["name"], e["recommends"]) for e in ecos if e["recommends"]]
+    if recommends:
+        console.print("\n[bold]Recommended fleet setup[/bold]:")
+        for name, items in recommends:
+            console.print(f"  [cyan]{name}[/cyan]")
+            for item in items:
+                console.print(f"    - {item}")
+
+
+def cmd_detect(args) -> int:
+    repo = resolve_repo(args.repo)
+    try:
+        payload = detect_payload(repo)
+    except GhError as e:
+        console.print(f"[red]cannot reach {repo}:[/red] {e}")
+        return 2
+    if args.json:
+        print(json.dumps(payload, indent=2))
+    else:
+        render_detect(payload)
+    return 0
 
 
 def cmd_fix(args) -> int:
@@ -519,6 +603,16 @@ def main() -> None:
         "repo", nargs="?", help="owner/repo (default: inferred from cwd)"
     )
     p_report.set_defaults(func=cmd_report)
+
+    p_detect = sub.add_parser(
+        "detect",
+        help="show detected ecosystems, artifacts, and the recommended setup",
+    )
+    p_detect.add_argument(
+        "repo", nargs="?", help="owner/repo (default: inferred from cwd)"
+    )
+    p_detect.add_argument("--json", action="store_true", help="print detection as JSON")
+    p_detect.set_defaults(func=cmd_detect)
 
     p_captain = sub.add_parser(
         "captain", help="check every fleet member is auditing itself (API-only)"

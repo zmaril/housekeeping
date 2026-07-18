@@ -115,6 +115,7 @@ housekeeper check zmaril/entl        # or named explicitly
 housekeeper check --only lockfiles,branch-protection
 housekeeper fix dependabot           # explain, confirm, then act
 housekeeper report                   # re-render the last check run
+housekeeper detect                   # show detected ecosystems, artifacts, recommended setup
 ```
 
 `check` prints a human table and writes JSON results to
