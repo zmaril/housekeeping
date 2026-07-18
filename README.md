@@ -1,3 +1,5 @@
+<!-- housekeeper:description Checks that a GitHub repo is in good order -->
+<!-- housekeeper:topics audit, ci, dependabot, github, housekeeping, repo-hygiene -->
 # housekeeping
 
 [![Powderworks Housekeeping on the GitHub Marketplace](https://img.shields.io/badge/marketplace-powderworks--housekeeping-blue?logo=github)](https://github.com/marketplace/actions/powderworks-housekeeping)

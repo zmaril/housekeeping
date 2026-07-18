@@ -125,3 +125,32 @@ def test_read_markers_parses_and_normalizes():
 
 def test_read_markers_absent():
     assert read_markers("# title\n\nNo markers.\n") == {}
+
+
+def test_read_markers_ignores_fenced_examples():
+    """A README documenting the syntax must not have its example parsed as the
+    declaration. Later matches win, so an unfenced example silently overrides the
+    real markers above it — which is what happened to housekeeping's own README."""
+    markers = read_markers(
+        "<!-- housekeeper:description Real tagline -->\n"
+        "<!-- housekeeper:topics audit, ci -->\n"
+        "# title\n\n"
+        "Declare them like this:\n\n"
+        "```markdown\n"
+        "<!-- housekeeper:description One-line tagline goes here. -->\n"
+        "<!-- housekeeper:topics rust, cli, codegen -->\n"
+        "```\n"
+    )
+    assert markers["description"] == "Real tagline"
+    assert markers["topics"] == ["audit", "ci"]
+
+
+def test_read_markers_only_fenced_example_is_no_declaration():
+    """A repo whose README *only* shows the syntax in a fence has not adopted it."""
+    markers = read_markers(
+        "# title\n\n"
+        "~~~\n"
+        "<!-- housekeeper:description One-line tagline goes here. -->\n"
+        "~~~\n"
+    )
+    assert markers == {}

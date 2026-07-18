@@ -24,6 +24,10 @@ from .readme import find_readme
 # Bare directive markers, one per line, mirroring fluessig's `<!-- fl:... -->` idiom.
 MARKER = re.compile(r"^<!--\s*housekeeper:(\w+)\s+(.*?)\s*-->\s*$", re.M)
 
+# Fenced code blocks (``` or ~~~, any info string). A README that *documents* the
+# marker syntax shows it inside a fence; those examples are prose, not declarations.
+FENCE = re.compile(r"^(?P<fence>```+|~~~+).*?^(?P=fence)\s*$", re.M | re.S)
+
 # GitHub topic rules: lowercase letters/numbers/hyphens, starting alnum; <=50 chars each,
 # <=20 topics per repo. (Hyphens only - dots and underscores are rejected by the UI.)
 TOPIC = re.compile(r"^[a-z0-9][a-z0-9-]*$")
@@ -37,7 +41,12 @@ def read_markers(readme_text: str) -> dict:
     Returns a dict that may hold "description" (the trimmed text) and/or "topics" (a
     normalized list: comma-split, stripped, lowercased, empties dropped). A key is
     absent when its marker is not present in the README.
+
+    Markers inside fenced code blocks are ignored: a README documenting the marker
+    syntax would otherwise have its own example parsed as the repo's declaration,
+    and — since later matches win — silently override the real markers above it.
     """
+    readme_text = FENCE.sub("", readme_text)
     markers: dict = {}
     for directive, value in MARKER.findall(readme_text):
         if directive == "description":
