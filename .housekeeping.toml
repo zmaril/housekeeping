@@ -12,3 +12,8 @@ conventional-commits = "required"  # adopted 2026-07-04; default is recommended
 # itself — ignore its own definition file too.
 [stray-todos]
 ignore = ["tests/", "src/housekeeper/checks/stray_todos.py"]
+
+[allow-auto-merge]
+# Auto-merge is enabled on the repo so a green PR can land without a babysitter.
+# The check asserts GitHub's allow_auto_merge matches this declaration.
+enabled = true
