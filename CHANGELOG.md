@@ -2,7 +2,36 @@
 
 Notable changes to housekeeping, newest first.
 
-## Unreleased
+## v0.21.0 — 2026-07-18
+
+Adds the `strict-status-checks` check, and fixes three defects in v0.20.0 that
+surfaced while rolling it out across the fleet — two of which made v0.20.0's own
+`housekeeper fix` unsafe to run.
+
+### Fixed
+
+- **`fix ci-exists` no longer overwrites existing CI**: it wrote
+  `.github/workflows/ci.yml` unconditionally, but `ci-exists` fails two different
+  ways — no CI at all, or CI that exists and is merely missing a test/lint/fmt step
+  for some language — and the scaffold only answers the first. On a repo whose CI
+  simply lacked a rust step, the fix replaced the entire hand-written workflow with
+  a generic stub. It now scaffolds only when there is no workflow at all, and
+  otherwise prints the missing steps to add by hand.
+- **`lockfiles` no longer demands a lockfile that cannot exist**: a package
+  declaring no dependencies has no lockfile to produce (bun deletes an empty one
+  outright), so the only way to pass was to fabricate a foreign lockfile. Such a
+  package is now skipped, and the skip is surfaced in the note rather than passing
+  silently. An unparseable manifest still counts as having dependencies, so a broken
+  file can't quietly downgrade the check.
+- **`lockfiles` gained an `ignore` list**: nested-aware detection started grading
+  packages whose lockfiles are gitignored on purpose. A repo can now exempt those
+  directories with `[lockfiles] ignore = ["spike", "crates/demo"]`.
+- **`repo-meta` ignores markers inside fenced code blocks**: `read_markers` scanned
+  the whole README and let later matches win, so a README *documenting* the marker
+  syntax had its own fenced example parsed as the declaration — silently overriding
+  the real markers above it. housekeeping's own README hit this, and
+  `housekeeper fix repo-meta` would have pushed the doc placeholder over the repo's
+  real description and topics.
 
 ### New checks
 
