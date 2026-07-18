@@ -2,6 +2,19 @@
 
 Notable changes to housekeeping, newest first.
 
+## 2026-07-18
+
+- `housekeeper new` gains an opt-in `--dependabot-automerge` flag. Off by default,
+  matching the fleet's default-OFF stance on auto-merge. When set, the scaffold
+  additionally writes `.github/workflows/dependabot-automerge.yml` (reusing the
+  `dependabot-automerge` check's canonical workflow) and adds
+  `[allow-auto-merge] enabled = true, dependabot = true` to the generated
+  `.housekeeping.toml`, so the new repo's `dependabot-automerge` check passes out
+  of the gate. A next-steps line spells out the prerequisites the scaffold can't
+  do: turning on GitHub's repo auto-merge setting and registering the required
+  status checks so `--auto` actually gates on green CI. Scaffold/CLI enhancement,
+  no `@v1` verdict change.
+
 ## v0.27.0 — 2026-07-18
 
 - New **`dependabot-automerge`** check (recommended, fixable): when a repo opts

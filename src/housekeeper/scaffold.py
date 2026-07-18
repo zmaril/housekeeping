@@ -24,6 +24,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .checks.conventional_commits import WORKFLOW as CONVENTIONAL_WORKFLOW
+from .checks.dependabot_automerge import WORKFLOW as DEPENDABOT_AUTOMERGE_WORKFLOW
 from .checks.license import MIT
 from .languages import BUN_TYPECHECK, ECOSYSTEMS
 
@@ -436,7 +437,7 @@ def _todo(name: str) -> str:
     )
 
 
-def _housekeeping_toml(private: bool) -> str:
+def _housekeeping_toml(private: bool, dependabot_automerge: bool) -> str:
     lines = [
         f'fleet = "{FLEET}"',
         "",
@@ -448,6 +449,14 @@ def _housekeeping_toml(private: bool) -> str:
     if private:
         lines.append("# Private repo: no public site to keep reachable.")
         lines.append('website = "off"')
+    if dependabot_automerge:
+        # Declare the intent the dependabot-automerge workflow relies on: opt in
+        # (dependabot = true) and turn on GitHub's repo auto-merge setting
+        # (enabled = true), so the dependabot-automerge check passes.
+        lines.append("")
+        lines.append("[allow-auto-merge]")
+        lines.append("enabled = true")
+        lines.append("dependabot = true")
     return "\n".join(lines) + "\n"
 
 
@@ -567,7 +576,9 @@ def _typecheck_yaml(flavor: str) -> str | None:
 # ---- The scaffold ------------------------------------------------------------
 
 
-def build_files(name: str, flavor: str, private: bool) -> dict[str, str]:
+def build_files(
+    name: str, flavor: str, private: bool, dependabot_automerge: bool
+) -> dict[str, str]:
     """Every repo-relative path the scaffold writes, mapped to its contents."""
     eco_key = FLAVORS[flavor]
     files: dict[str, str] = {
@@ -580,7 +591,7 @@ def build_files(name: str, flavor: str, private: bool) -> dict[str, str]:
         "notes/design.md": _design(name),
         "todo.txt": _todo(name),
         # Housekeeping config + fleet opt-in.
-        ".housekeeping.toml": _housekeeping_toml(private),
+        ".housekeeping.toml": _housekeeping_toml(private, dependabot_automerge),
         ".gitignore": _gitignore(eco_key),
         # Scripts + hooks.
         "scripts/dev.sh": _dev_sh(name, flavor),
@@ -600,6 +611,11 @@ def build_files(name: str, flavor: str, private: bool) -> dict[str, str]:
     typecheck = _typecheck_yaml(flavor)
     if typecheck is not None:
         files[".github/workflows/typecheck.yml"] = typecheck
+    if dependabot_automerge:
+        # Reuse the check module's canonical YAML — no second copy to drift.
+        files[".github/workflows/dependabot-automerge.yml"] = (
+            DEPENDABOT_AUTOMERGE_WORKFLOW
+        )
     files.update(FLAVOR_FILES[flavor](name))
     return files
 
@@ -613,10 +629,10 @@ _EXECUTABLE = {
 }
 
 
-def _next_steps(name: str, flavor: str) -> list[str]:
+def _next_steps(name: str, flavor: str, dependabot_automerge: bool) -> list[str]:
     lockfile = ECOSYSTEMS[FLAVORS[flavor]].lockfile or "the lockfile"
     dev_cmd, _ = DEV_INSTALL[flavor]
-    return [
+    steps = [
         f"Create the repo on GitHub: gh repo create {OWNER}/{name} --source . --push",
         "Enable branch protection on main with required status checks: "
         "test, straitjacket.",
@@ -627,10 +643,26 @@ def _next_steps(name: str, flavor: str) -> list[str]:
         "from the captain: run `housekeeper captain --sync-configs` from the "
         "powderworks checkout, not the scaffold.",
     ]
+    if dependabot_automerge:
+        # The workflow is only half the story: without GitHub's repo auto-merge
+        # setting on AND required status checks registered, auto-merge can fire on
+        # branch protection alone rather than on green CI. Say so honestly.
+        steps.append(
+            "dependabot auto-merge: turn on GitHub's repo auto-merge setting "
+            "(or run `housekeeper fix allow-auto-merge`), and register the "
+            "required status checks (test, straitjacket) so --auto actually gates "
+            "on green CI -- otherwise auto-merge fires on branch protection alone."
+        )
+    return steps
 
 
 def scaffold(
-    dest: Path, name: str, flavor: str, private: bool = False, force: bool = False
+    dest: Path,
+    name: str,
+    flavor: str,
+    private: bool = False,
+    force: bool = False,
+    dependabot_automerge: bool = False,
 ) -> ScaffoldResult:
     """Write a fleet-compliant repo skeleton into `dest`.
 
@@ -641,9 +673,13 @@ def scaffold(
         raise ValueError(f"unknown flavor {flavor!r}; choose one of {sorted(FLAVORS)}")
 
     result = ScaffoldResult(
-        dest=dest, flavor=flavor, next_steps=_next_steps(name, flavor)
+        dest=dest,
+        flavor=flavor,
+        next_steps=_next_steps(name, flavor, dependabot_automerge),
     )
-    for rel, content in build_files(name, flavor, private).items():
+    for rel, content in build_files(
+        name, flavor, private, dependabot_automerge
+    ).items():
         target = dest / rel
         if target.exists() and not force:
             result.skipped.append(rel)

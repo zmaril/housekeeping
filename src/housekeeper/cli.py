@@ -536,7 +536,14 @@ def cmd_new(args) -> int:
         )
         return 2
     dest = Path(args.dir).expanduser() / args.name
-    result = scaffold(dest, args.name, args.flavor, args.private, args.force)
+    result = scaffold(
+        dest,
+        args.name,
+        args.flavor,
+        args.private,
+        args.force,
+        args.dependabot_automerge,
+    )
     render_scaffold(result)
     return 0
 
@@ -653,6 +660,13 @@ def main() -> None:
         "--force",
         action="store_true",
         help="overwrite existing files instead of skipping them",
+    )
+    p_new.add_argument(
+        "--dependabot-automerge",
+        action="store_true",
+        dest="dependabot_automerge",
+        help="opt into dependabot auto-merge: add the workflow and the "
+        "[allow-auto-merge] config (default off)",
     )
     p_new.set_defaults(func=cmd_new)
 

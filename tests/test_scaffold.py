@@ -20,6 +20,7 @@ from housekeeper.checks.changelog import changelog
 from housekeeper.checks.ci import ci_exists
 from housekeeper.checks.codeowners import codeowners
 from housekeeper.checks.conventional_commits import documented, enforced_in_ci
+from housekeeper.checks.dependabot_automerge import dependabot_automerge
 from housekeeper.checks.gitignore import gitignore
 from housekeeper.checks.license import license_file
 from housekeeper.checks.readme import readme
@@ -146,13 +147,56 @@ def test_cmd_new_via_cli(tmp_path):
     from housekeeper.cli import cmd_new
 
     args = SimpleNamespace(
-        name="demo", dir=str(tmp_path), flavor="rust", private=False, force=False
+        name="demo",
+        dir=str(tmp_path),
+        flavor="rust",
+        private=False,
+        force=False,
+        dependabot_automerge=False,
     )
     assert cmd_new(args) == 0
     dest = tmp_path / "demo"
     assert (dest / "Cargo.toml").is_file()
     assert (dest / ".github" / "workflows" / "housekeeping.yml").is_file()
     assert (dest / "scripts" / "dev.sh").is_file()
+
+
+def test_dependabot_automerge_flag_writes_workflow_and_opts_in(tmp_path):
+    """With --dependabot-automerge: the workflow lands, the config declares the
+    intent, and the dependabot-automerge check passes against the scaffold."""
+    dest = tmp_path / "demo"
+    scaffold(dest, "demo", "python", dependabot_automerge=True)
+
+    workflow = dest / ".github" / "workflows" / "dependabot-automerge.yml"
+    assert workflow.is_file()
+    text = workflow.read_text()
+    assert "dependabot[bot]" in text
+    assert "gh pr merge --auto" in text
+
+    data = tomllib.loads((dest / ".housekeeping.toml").read_text())
+    assert data["allow-auto-merge"]["enabled"] is True
+    assert data["allow-auto-merge"]["dependabot"] is True
+
+    result = dependabot_automerge(ctx_for(dest))
+    assert result.status == Status.PASS, result.details
+
+
+def test_dependabot_automerge_off_by_default(tmp_path):
+    """Without the flag: no workflow, no [allow-auto-merge] section, and the
+    dependabot-automerge check SKIPS (not opted in). Other clone-only checks
+    still pass."""
+    dest, _ = make_scaffold(tmp_path, "python")
+
+    assert not (dest / ".github" / "workflows" / "dependabot-automerge.yml").exists()
+    data = tomllib.loads((dest / ".housekeeping.toml").read_text())
+    assert "allow-auto-merge" not in data
+
+    ctx = ctx_for(dest)
+    result = dependabot_automerge(ctx)
+    assert result.status == Status.SKIP, result.details
+
+    assert scripts(ctx).status == Status.PASS
+    assert readme(ctx).status == Status.PASS
 
 
 def test_flavor_manifests_present(tmp_path):

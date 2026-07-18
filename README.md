@@ -225,6 +225,7 @@ housekeeper fix dependabot         # explain, confirm, then act
 housekeeper report                 # re-render the last run
 housekeeper detect                 # show detected ecosystems, artifacts, recommended setup
 housekeeper new my-lib --flavor rust   # scaffold a fleet-compliant repo skeleton
+housekeeper new my-lib --dependabot-automerge  # ...and opt into dependabot auto-merge
 ```
 
 `check` exits nonzero if any required check fails, so it can gate other
