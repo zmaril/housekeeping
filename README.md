@@ -5,7 +5,8 @@
 Checks that a GitHub repo is in good order — branch protection, CI with tests
 and lint, no CI step masking its own failure with `continue-on-error`, a
 scheduled run so bitrot surfaces on its own, bounded job timeouts, no
-rerun-until-green test retries, a pinned (non-floating) CI toolchain, dependabot
+rerun-until-green test retries, a pinned (non-floating) CI toolchain, a coverage
+tool wired up for each language (advisory, presence-only), dependabot
 coverage, secret scanning, read-only workflow tokens, lockfiles committed and in
 sync, gitignore coverage, CODEOWNERS routing review, shell scripts corralled
 under `scripts/` with a `dev.sh` that stands up the dev environment, TODO/FIXME

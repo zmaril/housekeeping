@@ -22,6 +22,7 @@ DEFAULT_SEVERITY = {
     "ci-green": "required",
     "typecheck": "required",
     "builds": "required",
+    "coverage": "recommended",
     "codegen-drift": "required",
     "dependabot": "required",
     "secret-scanning": "required",
