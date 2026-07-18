@@ -2,6 +2,19 @@
 
 Notable changes to housekeeping, newest first.
 
+## v0.26.0 — 2026-07-18
+
+- `lockfiles` gains a git-history staleness fallback for ecosystems with no
+  native sync check (ruby's Gemfile.lock, go's go.sum). Where cargo/uv/bun/npm
+  are verified with their own tool, ruby and go were previously only noted as
+  unverified; now the check compares commit timestamps and flags a lockfile
+  whose manifest was committed in a strictly later commit as likely stale. The
+  "not committed" branch also now distinguishes a gitignored lockfile, and a
+  native-check ecosystem whose tool is absent falls back to the heuristic
+  instead of going unverified. **Verdict change**: lockfiles can now fail
+  ruby/go repos that carry a stale-by-history lockfile, so a repo that
+  previously passed on presence alone may now fail.
+
 ## v0.24.0 — 2026-07-18
 
 - New **recommended** `artifacts-built` check: for every build artifact
@@ -59,7 +72,6 @@ Notable changes to housekeeping, newest first.
   skip). No auto-fix — pinning to a version is a human decision (like `builds` /
   `reproducible-toolchain`), and dependabot still bumps the pins afterwards. New
   check, so this needs a release bump (Zack cuts releases).
-
 ## v0.21.0 — 2026-07-18
 
 - New **`allow-auto-merge`** check (recommended, fixable): asserts the repo's
