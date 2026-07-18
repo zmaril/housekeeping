@@ -87,7 +87,11 @@ language lives in **`languages.py`**, never hard-coded in a check:
   its lockfile, how to verify/regenerate it (`lock_check`/`lock_regen`/`tool`),
   its dependabot id, its `.gitignore` build-junk patterns, its `language`, and a
   CI job template. `ECOSYSTEMS` is the registry; `detect_ecosystems()` returns
-  the entries a repo uses.
+  the entries a repo uses. Detection is **nested-aware**: it emits one `Ecosystem`
+  instance per location, each carrying its `dir` (relative to the repo root, ""
+  for root), so a Rust workspace's `crates/*-node` npm package, `crates/*-python`
+  uv package, and so on are graded at their real paths — a consumer reads the
+  lockfile at `workdir / eco.dir / eco.lockfile`, not the root.
 - **`Language`** (rust, js, python, ruby, go): the `test`/`lint`/`fmt` regexes
   that prove it's exercised in CI. Several ecosystems share one language, so
   they're joined by `Ecosystem.language`.
@@ -169,10 +173,16 @@ non-skipped check failed.
 | `vale` | clone | A `.vale.ini` (with its `StylesPath`) is present **and** vale runs in CI. Overlaps with `straitjacket` by design — straitjacket scans for slop, vale enforces house style and terminology; wiring only, findings are vale's own business | Scaffold `.vale.ini` + `styles/` + a CI step |
 | `codespell` | clone | codespell runs in CI. The fleet's spell checker, split from vale on purpose: vale's dictionary spell-check false-positives on every unknown jargon word, so vale does style/terms and codespell does spelling — it flags only *known* misspellings, so it can't cry wolf on a term it's never seen. Wiring only | Scaffold `.codespellrc` + a CI step |
 
-Ecosystem detection lives once in `context.py` (look for `Cargo.toml`,
-`package.json` + which lockfile, `pyproject.toml`, `go.mod`,
-`.github/workflows`) and is shared by `ci-exists`, `dependabot`, and
-`lockfiles` so they never disagree about what the repo is.
+Ecosystem detection lives once in `languages.py` (re-exported through
+`context.py`; look for `Cargo.toml`/`Cargo.lock`, `package.json` + which
+lockfile, `pyproject.toml`, `go.mod`, `.github/workflows`) and is shared by
+`ci-exists`, `dependabot`, `lockfiles`, `gitignore`, and `coverage` so they
+never disagree about what the repo is. It is **nested-aware** — one instance per
+location, each stamped with its directory — so those checks grade nested
+packages (a workspace's `crates/*-node`, `crates/*-python`, `crates/*-ruby`) at
+their real paths, not just the repo root. cargo anchors on `Cargo.lock` (a
+workspace shares one lock; members aren't emitted separately); a shared
+`nested_manifests(workdir, filename)` helper does the single tree-walk.
 
 ### Severities and per-repo config
 

@@ -147,9 +147,22 @@ def ci_exists(ctx: RepoContext):
     return passed(f"test + lint + fmt in CI for every language: {', '.join(languages)}")
 
 
+def templated_ecosystems(ecosystems) -> list:
+    """Ecosystems with a CI template, deduped by name: nested instances of the same
+    ecosystem (a repo with several crates/*-node bun packages) share one CI job
+    template, not one scaffolded job per copy."""
+    seen: set[str] = set()
+    out = []
+    for e in ecosystems:
+        if e.ci_template and e.name not in seen:
+            seen.add(e.name)
+            out.append(e)
+    return out
+
+
 @fix_for("ci-exists")
 def fix(ctx: RepoContext):
-    templated = [e for e in ctx.ecosystems if e.ci_template]
+    templated = templated_ecosystems(ctx.ecosystems)
     if not templated:
         from ..fixing import console
 

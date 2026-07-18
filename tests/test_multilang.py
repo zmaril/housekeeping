@@ -66,6 +66,29 @@ def test_all_languages_covered_passes(tmp_path):
     assert "ruby" in result.details and "rust" in result.details
 
 
+def test_nested_js_package_demands_js_in_ci(tmp_path):
+    # A nested bun package (dir set) still contributes its language to the demand
+    # set — ci-exists now grades nested packages, not just root ones.
+    from dataclasses import replace
+
+    nested_bun = replace(BUN, dir="crates/x-node")
+    ctx = repo(tmp_path, RUST_ONLY_CI, ecosystems=[RUST, nested_bun])
+    result = ci_exists(ctx)
+    assert result.status == Status.FAIL
+    for gap in ("js: no test step", "js: no lint step", "js: no fmt step"):
+        assert gap in result.details
+
+
+def test_ci_fix_dedups_templated_ecosystems_by_name():
+    # Two nested bun packages must not scaffold two identical bun CI jobs.
+    from dataclasses import replace
+
+    from housekeeper.checks.ci import templated_ecosystems
+
+    templated = templated_ecosystems([replace(BUN, dir="a"), replace(BUN, dir="b")])
+    assert [e.name for e in templated] == ["bun"]
+
+
 def test_codegen_undeclared_skips(tmp_path):
     ctx = repo(tmp_path, RUST_ONLY_CI)
     assert codegen_drift(ctx).status == Status.SKIP

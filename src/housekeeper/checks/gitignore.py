@@ -17,11 +17,15 @@ def missing_patterns(ctx: RepoContext) -> list[str]:
     have = set()
     if path.is_file():
         have = {line.strip().lstrip("/") for line in path.read_text().splitlines()}
-    missing = []
-    for eco in ctx.ecosystems:
-        for pattern in eco.gitignore:
-            if pattern not in have and pattern.rstrip("/") not in have:
-                missing.append(pattern)
+    # Git ignore patterns are recursive, so a root `node_modules/` already covers a
+    # nested `crates/x-node/node_modules/`. Collect the deduped set of patterns across
+    # ALL ecosystem instances (root and nested) and require them in the root ignore.
+    wanted = {pattern for eco in ctx.ecosystems for pattern in eco.gitignore}
+    missing = [
+        pattern
+        for pattern in wanted
+        if pattern not in have and pattern.rstrip("/") not in have
+    ]
     return sorted(set(missing))
 
 
