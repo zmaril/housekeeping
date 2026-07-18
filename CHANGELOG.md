@@ -2,179 +2,70 @@
 
 Notable changes to housekeeping, newest first.
 
-## v0.30.0 — 2026-07-18
+## v0.20.0 — 2026-07-18
 
-- **`repo-meta` now reconciles against a README declaration** (behavior change).
-  The repo's description (tagline) and topics (tags) are declared invisibly at the
-  top of the README via `<!-- housekeeper:description ... -->` and
+First release cut since v0.19.0. It consolidates the batch of checks, commands,
+and verdict changes that landed on main after v0.19.0 (none of which were tagged
+individually) into a single release.
+
+### New checks
+
+- **`coverage`** (recommended, advisory): every detected language ecosystem
+  (rust, js, python) must wire up *some* coverage tool — presence-only, not a
+  threshold. Accepts a config file, a CI step or task-runner target, or a manifest
+  dependency; skips when no rust/js/python ecosystem is present.
+- **`allow-auto-merge`** (recommended, fixable): asserts GitHub's `allow_auto_merge`
+  setting matches a declared preference (default off); opt in with
+  `[allow-auto-merge] enabled = true`. The fix PATCHes the setting to match.
+- **`artifacts-built`** (recommended, warns): for every build artifact detection
+  finds (napi addon, PyO3/maturin wheel, Magnus/rb-sys gem, Tauri app, web/site
+  bundle, compiled binary), greps the workflows for the build step it needs and
+  reports the ones with no coverage; conservative static parse, so it warns rather
+  than gates.
+- **`pinned-versions`** (recommended, check-only): flags floating version
+  specifiers per ecosystem (npm/bun exact semver, python `==X.Y.Z`, ruby `= X.Y.Z`,
+  actions a 40-char commit SHA; cargo advisory by default since `Cargo.lock` pins
+  the build). Configure scope via `[pinned-versions]`; no auto-fix.
+- **`dependabot-automerge`** (recommended, fixable): when a repo opts in with
+  `[allow-auto-merge] dependabot = true`, wants a workflow that auto-merges
+  dependabot's non-major PRs once their required checks go green (also requires
+  `enabled = true`). The fix writes `.github/workflows/dependabot-automerge.yml`.
+
+### New commands
+
+- **`housekeeper detect`**: prints the repo's detected ecosystems, typed-language
+  layers, and build artifacts, plus the recommended fleet setup per ecosystem
+  (`--json` for machine output). Backed by a new artifact-detection layer in
+  `languages.py` that reads source manifests and skips vendored/build trees.
+- **`housekeeper new <name> --flavor rust|bun|python`**: scaffolds a
+  fleet-compliant repo skeleton (CI/housekeeping workflows, committed git hooks,
+  `.housekeeping.toml`, LICENSE, `scripts/dev.sh`, dependabot config, CODEOWNERS,
+  `notes/design.md`), then prints the human next steps it can't do itself. The
+  opt-in `--dependabot-automerge` flag (off by default) additionally writes the
+  `dependabot-automerge` workflow and sets `[allow-auto-merge] enabled = true,
+  dependabot = true`, so the new repo passes that check out of the gate.
+
+### Changed verdicts / behavior
+
+- **`lockfiles` git-history staleness fallback**: for ecosystems with no native
+  sync check (ruby's Gemfile.lock, go's go.sum), the check now compares commit
+  timestamps and flags a lockfile whose manifest was committed in a strictly later
+  commit as likely stale; it also distinguishes a gitignored lockfile and falls
+  back to the heuristic when a native tool is absent. Verdict change: can now fail
+  ruby/go repos carrying a stale-by-history lockfile.
+- **Nested-aware ecosystem detection**: `detect_ecosystems` now returns one
+  `Ecosystem` per location (each carrying its `dir`) instead of probing only the
+  repo root, so nested manifests under `crates/*` are detected. `lockfiles`,
+  `dependabot`, `ci-exists`, `coverage`, and `gitignore` now grade nested packages
+  per-directory, so repos with nested packages (entl, disponent) may now fail for
+  genuinely-ungraded nested lockfiles, dependabot coverage, or CI. Closes #90.
+- **`repo-meta` reconciles a README declaration**: description and topics are
+  declared at the top of the README via `<!-- housekeeper:description ... -->` and
   `<!-- housekeeper:topics a, b, c -->` markers, and the check asserts GitHub's
-  actual values match them (README = source of truth). Topics are validated to
-  GitHub's rules (lowercase `[a-z0-9-]`, ≤50 chars each, ≤20 total). The check now
-  needs a clone as well as the API, and its verdict changed: a repo with no markers
-  now **fails** with an adoption nudge instead of passing on mere presence.
-  `housekeeper fix repo-meta` pushes the README-declared values to GitHub (needs an
-  admin token; a 403 prints how to set them by hand), or - when a repo has no markers
-  yet - seeds them into the README from GitHub's current description/topics. This is
-  an Action-behavior change, so it needs a release bump (Zack cuts releases), and
-  every repo must add the markers - the fix seeds them from the current values.
-
-## v0.29.0 — 2026-07-18
-
-- **Nested-aware ecosystem detection.** `detect_ecosystems` now returns one
-  `Ecosystem` instance per location — each carrying its `dir` relative to the
-  repo root — instead of probing only the repo root. A Rust workspace's node
-  package under `crates/*-node`, its `crates/*-python` uv package, its
-  `crates/*-ruby` bundler package, and any other nested manifest are finally
-  detected. cargo anchors on `Cargo.lock` locations (a workspace shares one lock;
-  member crates aren't emitted separately, and a lockless rust repo still gets
-  flagged at its topmost `Cargo.toml`); npm-family picks its manager by the
-  lockfile in the SAME directory. **Verdict change** across several checks, which
-  now grade nested packages per-directory:
-  - `lockfiles` finds each lockfile at `workdir/<dir>/<lockfile>`, runs the native
-    tool in that directory, and labels every line with the dir
-    (`bun (crates/entl-node): ...`).
-  - `dependabot` gains a per-`(ecosystem, directory)` coverage model: a nested
-    package demands an `updates` entry at ITS directory (exact, or a `/crates/*`
-    / `/crates/**` `directories` glob), and the fix emits the correct
-    `directory:` per missing pair instead of a hardcoded `/`.
-  - `ci-exists` and `coverage` see nested languages in their demanded-language
-    set (the ci-exists fix dedups templated ecosystems by name).
-  - `gitignore` requires the deduped set of build-junk patterns across all
-    instances in the root `.gitignore` (git ignore is recursive, so root covers
-    nested).
-
-  So repos with nested packages (entl, disponent) that previously passed on
-  root-only detection may now fail for genuinely-ungraded nested lockfiles,
-  dependabot coverage, or CI. Closes #90. New verdicts, so this needs a release
-  bump (Zack cuts releases).
-
-## 2026-07-18
-
-- `housekeeper new` gains an opt-in `--dependabot-automerge` flag. Off by default,
-  matching the fleet's default-OFF stance on auto-merge. When set, the scaffold
-  additionally writes `.github/workflows/dependabot-automerge.yml` (reusing the
-  `dependabot-automerge` check's canonical workflow) and adds
-  `[allow-auto-merge] enabled = true, dependabot = true` to the generated
-  `.housekeeping.toml`, so the new repo's `dependabot-automerge` check passes out
-  of the gate. A next-steps line spells out the prerequisites the scaffold can't
-  do: turning on GitHub's repo auto-merge setting and registering the required
-  status checks so `--auto` actually gates on green CI. Scaffold/CLI enhancement,
-  no `@v1` verdict change.
-
-## v0.27.0 — 2026-07-18
-
-- New **`dependabot-automerge`** check (recommended, fixable): when a repo opts
-  in with `[allow-auto-merge] dependabot = true` in `.housekeeping.toml`, it wants
-  a workflow that turns on auto-merge for dependabot's own PRs (non-major bumps
-  only — majors are left for a human), so GitHub lands them the moment their
-  required checks go green and never before. Opting in also requires
-  `enabled = true` (GitHub's repo auto-merge setting must be on); the check fails
-  loudly if it isn't. It only actually gates on green CI when the repo has required
-  status checks registered (see `required-checks`); without that, auto-merge fires
-  as soon as branch protection alone is satisfied. `housekeeper fix
-  dependabot-automerge` writes `.github/workflows/dependabot-automerge.yml`. New
-  check, so this needs a release bump (Zack cuts releases).
-
-## v0.26.0 — 2026-07-18
-
-- `lockfiles` gains a git-history staleness fallback for ecosystems with no
-  native sync check (ruby's Gemfile.lock, go's go.sum). Where cargo/uv/bun/npm
-  are verified with their own tool, ruby and go were previously only noted as
-  unverified; now the check compares commit timestamps and flags a lockfile
-  whose manifest was committed in a strictly later commit as likely stale. The
-  "not committed" branch also now distinguishes a gitignored lockfile, and a
-  native-check ecosystem whose tool is absent falls back to the heuristic
-  instead of going unverified. **Verdict change**: lockfiles can now fail
-  ruby/go repos that carry a stale-by-history lockfile, so a repo that
-  previously passed on presence alone may now fail.
-
-## v0.24.0 — 2026-07-18
-
-- New **recommended** `artifacts-built` check: for every build artifact
-  detection finds a repo produces (napi addon, PyO3/maturin wheel, Magnus/rb-sys
-  gem, Tauri app, web/site bundle, compiled binary), it greps the workflows for
-  the build step that artifact needs and reports the ones with no build
-  coverage. A heavy artifact (a Tauri bundle) is expected to build on a scheduled
-  workflow; the lighter per-PR gate stays the required `builds` check's job. It
-  is conservative — it matches workflow step/run text and resolves
-  `bun`/`npm`/`pnpm`/`yarn run <name>` against the scripts of every package.json
-  in the repo (nested included, so a `bun run build` that maps to `napi build` in
-  a sub-package resolves), but it never runs anything. Because static parsing is
-  imperfect it **warns rather than gates**. New check plus a new Action verdict:
-  an Action-behavior change, so it needs a release bump (Zack cuts releases).
-
-## 2026-07-18
-
-- New `housekeeper new <name> --flavor rust|bun|python` command: scaffolds a
-  fleet-compliant repo skeleton — CI/housekeeping workflows, committed git
-  hooks, a `.housekeeping.toml` carrying the fleet declaration, LICENSE,
-  `scripts/dev.sh`, dependabot config, CODEOWNERS, and `notes/design.md` — then
-  prints what it created and the human next steps it can't do itself: creating
-  the repo on GitHub, turning on branch protection, running `dev.sh` once to
-  generate the lockfile, and letting the captain sync the managed lint configs.
-  A CLI command only: no check verdicts and no `@v1` Action behavior change.
-- New `housekeeper detect` command: prints the repo's detected ecosystems,
-  typed-language layers, and the build artifacts it produces, plus the
-  recommended fleet setup per ecosystem (`--json` for machine output). Backed by
-  a new artifact-detection layer in `languages.py` (`Artifact` / `ARTIFACTS` /
-  `detect_artifacts`) that reads source manifests — napi addons, PyO3/maturin
-  wheels, Magnus/rb-sys gems, Tauri apps, web/site bundles, and compiled
-  binaries — skipping vendored and build trees so a dependency's artifact never
-  counts as the repo's own. `Ecosystem` gains a `recommends` field carrying the
-  recommended setup for that world. Detection-only: no check verdicts change.
-
-## v0.25.0 — 2026-07-18
-
-- New **`pinned-versions`** check (recommended, check-only): flags floating
-  version specifiers per detected ecosystem so a dependency can't silently drift
-  — the failure mode that shipped fluessig's floating `@typespec/compiler
-  ^1.13.0` as a fleet-wide codegen change with no diff to point at. It leans on
-  the existing ecosystem detection (`ctx.ecosystems`) and grades each world by
-  its own idea of "pinned": **npm/bun** (`dependencies` + `devDependencies` of
-  every package.json) wants an exact semver; **python** (`pyproject.toml` +
-  `requirements.txt`, PEP 508) wants a lone `==X.Y.Z`; **ruby** (`Gemfile`,
-  `*.gemspec`) wants `= X.Y.Z`; **actions** (`uses:` across workflows and
-  `.github/actions/**/action.yml`) want a **40-char commit SHA** — and
-  `@stable`/`@oldstable` release channels are allowed, aligned with
-  `reproducible-toolchain`. **cargo** is **advisory by default** because
-  `Cargo.lock` pins the build (reported in the note, not counted). Local / path /
-  workspace / SHA-pinned deps are never flagged, and peerDependencies + bounded
-  ranges are counted in the note rather than failed. Configure scope with
-  `[pinned-versions]`: `cargo = "advisory" | "on" | "off"`, `actions = true |
-  false`, `capped_ok` (accept bounded ranges / `~>`), and `ignore` (names to
-  skip). No auto-fix — pinning to a version is a human decision (like `builds` /
-  `reproducible-toolchain`), and dependabot still bumps the pins afterwards. New
-  check, so this needs a release bump (Zack cuts releases).
-
-## v0.21.0 — 2026-07-18
-
-- New **`allow-auto-merge`** check (recommended, fixable): asserts the repo's
-  GitHub `allow_auto_merge` setting matches a declared preference. The default
-  preference is **off** — this fleet's workflow is branch-protection +
-  required-checks + a human doing the merge, and auto-merge fires the merge with
-  nobody at the merge moment. A repo that wants auto-merge opts in with
-  `[allow-auto-merge] enabled = true` in `.housekeeping.toml`; the check then
-  passes only when GitHub's actual setting matches, either way. Auto-merge never
-  bypasses branch protection or required checks, so on is a legitimate choice —
-  this is a preference, not a hardcoded polarity. `housekeeper fix
-  allow-auto-merge` PATCHes the setting to match (needs an admin token; a 403
-  prints how to flip it by hand). New check, so this needs a release bump (Zack
-  cuts releases).
-
-## v0.20.0 — 2026-07-09
-
-- New **`coverage`** check (recommended, advisory): every detected language
-  ecosystem (rust, js, python) must have *some* coverage tool wired up —
-  presence-only, not a percentage or threshold. It accepts a range of signals so
-  each repo configures as it likes: a coverage config file (`codecov.yml`,
-  `.coveragerc`), a CI step or task-runner target (`cargo llvm-cov`, `tarpaulin`,
-  `grcov`, `bun test --coverage`, `c8`/`nyc`, `pytest-cov`), or a manifest
-  dependency. Skips when no rust/js/python ecosystem is present. Advisory
-  (`recommended`) by default following the `ci-green` advisory-first precedent, so
-  it warns rather than gating while repos wire coverage; promote per-repo to
-  `required` via `powderworks/housecaptain.toml [policy] locked` later. No patch /
-  changed-lines coverage — that machinery doesn't exist yet. See the design note
-  `notes/fleet-policy-test-layout-and-coverage.md`.
+  actual values match them (README = source of truth; topics validated to GitHub's
+  rules). Verdict change: a repo with no markers now fails with an adoption nudge.
+  `housekeeper fix repo-meta` pushes the declared values to GitHub, or — when a
+  repo has no markers yet — seeds them into the README from GitHub's current values.
 
 ## v0.19.0 — 2026-07-08
 
