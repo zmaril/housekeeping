@@ -44,6 +44,7 @@ DEFAULT_SEVERITY = {
     "license": "required",
     "changelog": "required",
     "repo-meta": "recommended",
+    "allow-auto-merge": "recommended",
     "stale": "recommended",
 }
 

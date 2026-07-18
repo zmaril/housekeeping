@@ -2,6 +2,21 @@
 
 Notable changes to housekeeping, newest first.
 
+## v0.21.0 — 2026-07-18
+
+- New **`allow-auto-merge`** check (recommended, fixable): asserts the repo's
+  GitHub `allow_auto_merge` setting matches a declared preference. The default
+  preference is **off** — this fleet's workflow is branch-protection +
+  required-checks + a human doing the merge, and auto-merge fires the merge with
+  nobody at the merge moment. A repo that wants auto-merge opts in with
+  `[allow-auto-merge] enabled = true` in `.housekeeping.toml`; the check then
+  passes only when GitHub's actual setting matches, either way. Auto-merge never
+  bypasses branch protection or required checks, so on is a legitimate choice —
+  this is a preference, not a hardcoded polarity. `housekeeper fix
+  allow-auto-merge` PATCHes the setting to match (needs an admin token; a 403
+  prints how to flip it by hand). New check, so this needs a release bump (Zack
+  cuts releases).
+
 ## v0.20.0 — 2026-07-09
 
 - New **`coverage`** check (recommended, advisory): every detected language
