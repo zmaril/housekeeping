@@ -142,6 +142,16 @@ def test_force_overwrites(tmp_path):
     assert "# demo" in (dest / "README.md").read_text()
 
 
+def test_readme_has_metadata_markers(tmp_path):
+    dest, _ = make_scaffold(tmp_path, "python")
+    readme_text = (dest / "README.md").read_text()
+    assert (
+        "<!-- housekeeper:description One-line description of demo goes here. -->"
+        in (readme_text)
+    )
+    assert "<!-- housekeeper:topics powderworks -->" in readme_text
+
+
 def test_cmd_new_via_cli(tmp_path):
     """The CLI entry point writes a scaffold under --dir/<name>."""
     from housekeeper.cli import cmd_new

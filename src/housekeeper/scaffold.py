@@ -314,6 +314,8 @@ echo "Dev environment ready. Hooks are active (git commit --no-verify to skip)."
 def _readme(name: str, flavor: str) -> str:
     dev_cmd, _ = DEV_INSTALL[flavor]
     return f"""\
+<!-- housekeeper:description One-line description of {name} goes here. -->
+<!-- housekeeper:topics powderworks -->
 # {name}
 
 One-line description of {name} goes here.

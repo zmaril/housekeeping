@@ -163,7 +163,7 @@ non-skipped check failed.
 | `website` | API + HTTP | Repo homepage URL is set and returns 200 (following ≤3 redirects, 10s timeout); README badge/doc links resolve | none — report only |
 | `license` | clone + API | LICENSE file present and GitHub detects a license | Drop in MIT with current year |
 | `changelog` | clone | A CHANGELOG file exists (CHANGELOG.md, CHANGES.md, HISTORY.md, …) — presence only; versions, dates, or freeform all fine | Scaffold a newest-first dated stub |
-| `repo-meta` | API | Description set; ≥1 topic; issues enabled | Prompt for values, set via API |
+| `repo-meta` | clone + API | The README declares the description + topics via invisible `<!-- housekeeper:description ... -->` / `<!-- housekeeper:topics ... -->` markers (README = source of truth), and GitHub's actual values match them (topics validated: lowercase `[a-z0-9-]`, ≤50 chars, ≤20); issues enabled | Push the README-declared values to GitHub (needs admin); when a repo has no markers yet, seed them into the README from GitHub's current values |
 | `stale` | API | No PRs idle >30 days; no merged-but-undeleted branches; `delete_branch_on_merge` enabled | Enable the setting; delete merged branches (confirm each) |
 | `allow-auto-merge` | API | GitHub `allow_auto_merge` matches the declared `[allow-auto-merge] enabled` preference (default off) | PATCH the repo setting (needs admin) |
 | `dependabot-automerge` | clone | If `[allow-auto-merge] dependabot = true`, a workflow auto-merges dependabot PRs once required checks pass (requires `enabled = true`) | Write the workflow |
