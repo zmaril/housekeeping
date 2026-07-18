@@ -38,5 +38,6 @@ from . import (  # noqa: F401
     changelog,
     repo_meta,
     allow_auto_merge,
+    dependabot_automerge,
     stale,
 )

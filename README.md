@@ -261,6 +261,13 @@ check then verifies GitHub's actual setting matches the declared preference
 either way; `housekeeper fix allow-auto-merge` flips the GitHub setting to
 match (needs an admin token — a 403 prints how to flip it by hand).
 
+Add `dependabot = true` to the same table to opt into the `dependabot-automerge`
+check: it wants a workflow that turns on auto-merge for dependabot's own PRs
+(non-major bumps), so GitHub lands them the moment their required checks go green.
+It needs `enabled = true` too, and only actually gates on green CI when the repo
+has required status checks registered; `housekeeper fix dependabot-automerge`
+writes the workflow.
+
 `pinned-versions` (recommended) flags floating version specifiers per detected
 ecosystem so a dependency can't silently drift: npm/bun and python and ruby want
 an exact version (`1.2.3`, `==1.2.3`, `= 1.2.3`), actions want a 40-char commit
