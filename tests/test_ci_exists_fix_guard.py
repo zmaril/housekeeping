@@ -25,46 +25,41 @@ jobs:
 """
 
 
-def ctx_for(tmp_path, ecosystems):
-    return SimpleNamespace(workdir=tmp_path, ecosystems=ecosystems, config=Config())
+def run_fix(tmp_path, monkeypatch, workflow: str | None) -> list:
+    """Run the ci-exists fix on a cargo repo, optionally seeded with an existing
+    ci.yml, and return the recorded apply_file_fix calls (empty = wrote nothing).
 
+    The rust ecosystem has no rust steps in either case, so ci-exists fails both
+    times — only the presence of existing CI should change what the fix does.
+    """
+    if workflow is not None:
+        workflows = tmp_path / ".github" / "workflows"
+        workflows.mkdir(parents=True, exist_ok=True)
+        (workflows / "ci.yml").write_text(workflow)
+    (tmp_path / "Cargo.toml").write_text("[package]\nname = 'demo'\n")
 
-def write_workflow(tmp_path, name, body):
-    workflows = tmp_path / ".github" / "workflows"
-    workflows.mkdir(parents=True, exist_ok=True)
-    (workflows / name).write_text(body)
-    return workflows / name
+    from housekeeper.languages import ECOSYSTEMS
+
+    called: list = []
+    monkeypatch.setattr(ci_module, "apply_file_fix", lambda *a, **k: called.append(a))
+    ci_module.fix(
+        SimpleNamespace(
+            workdir=tmp_path, ecosystems=[ECOSYSTEMS["cargo"]], config=Config()
+        )
+    )
+    return called
 
 
 def test_fix_does_not_clobber_an_existing_workflow(tmp_path, monkeypatch):
-    from housekeeper.languages import ECOSYSTEMS
-
-    path = write_workflow(tmp_path, "ci.yml", EXISTING)
-    # A rust ecosystem with no rust steps in CI: ci-exists fails, but the repo
-    # plainly has CI already, so scaffolding is the wrong answer.
-    (tmp_path / "Cargo.toml").write_text("[package]\nname = 'demo'\n")
-
-    called = []
-    monkeypatch.setattr(
-        ci_module, "apply_file_fix", lambda *a, **k: called.append(a)
-    )
-
-    ci_module.fix(ctx_for(tmp_path, [ECOSYSTEMS["cargo"]]))
+    called = run_fix(tmp_path, monkeypatch, EXISTING)
 
     assert called == [], "fix must not run a file write when workflows already exist"
-    assert path.read_text() == EXISTING, "existing workflow was modified"
+    assert (tmp_path / ".github" / "workflows" / "ci.yml").read_text() == EXISTING, (
+        "existing workflow was modified"
+    )
 
 
 def test_fix_still_scaffolds_when_there_is_no_ci(tmp_path, monkeypatch):
-    from housekeeper.languages import ECOSYSTEMS
-
-    (tmp_path / "Cargo.toml").write_text("[package]\nname = 'demo'\n")
-
-    called = []
-    monkeypatch.setattr(
-        ci_module, "apply_file_fix", lambda *a, **k: called.append(a)
-    )
-
-    ci_module.fix(ctx_for(tmp_path, [ECOSYSTEMS["cargo"]]))
+    called = run_fix(tmp_path, monkeypatch, None)
 
     assert len(called) == 1, "a repo with no CI at all should still get a scaffold"

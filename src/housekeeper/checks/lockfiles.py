@@ -77,7 +77,11 @@ def declares_dependencies(manifest_path: Path, manifest_name: str) -> bool | Non
             project.get("optional-dependencies"),
             data.get("dependency-groups"),
             # poetry always lists `python` itself, so it counts only past one entry
-            {k: v for k, v in (poetry.get("dependencies") or {}).items() if k != "python"},
+            {
+                k: v
+                for k, v in (poetry.get("dependencies") or {}).items()
+                if k != "python"
+            },
             poetry.get("group"),
         ]
         return any(bool(b) for b in buckets)
