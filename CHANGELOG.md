@@ -2,6 +2,29 @@
 
 Notable changes to housekeeping, newest first.
 
+## v0.25.0 — 2026-07-18
+
+- New **`pinned-versions`** check (recommended, check-only): flags floating
+  version specifiers per detected ecosystem so a dependency can't silently drift
+  — the failure mode that shipped fluessig's floating `@typespec/compiler
+  ^1.13.0` as a fleet-wide codegen change with no diff to point at. It leans on
+  the existing ecosystem detection (`ctx.ecosystems`) and grades each world by
+  its own idea of "pinned": **npm/bun** (`dependencies` + `devDependencies` of
+  every package.json) wants an exact semver; **python** (`pyproject.toml` +
+  `requirements.txt`, PEP 508) wants a lone `==X.Y.Z`; **ruby** (`Gemfile`,
+  `*.gemspec`) wants `= X.Y.Z`; **actions** (`uses:` across workflows and
+  `.github/actions/**/action.yml`) want a **40-char commit SHA** — and
+  `@stable`/`@oldstable` release channels are allowed, aligned with
+  `reproducible-toolchain`. **cargo** is **advisory by default** because
+  `Cargo.lock` pins the build (reported in the note, not counted). Local / path /
+  workspace / SHA-pinned deps are never flagged, and peerDependencies + bounded
+  ranges are counted in the note rather than failed. Configure scope with
+  `[pinned-versions]`: `cargo = "advisory" | "on" | "off"`, `actions = true |
+  false`, `capped_ok` (accept bounded ranges / `~>`), and `ignore` (names to
+  skip). No auto-fix — pinning to a version is a human decision (like `builds` /
+  `reproducible-toolchain`), and dependabot still bumps the pins afterwards. New
+  check, so this needs a release bump (Zack cuts releases).
+
 ## v0.21.0 — 2026-07-18
 
 - New **`allow-auto-merge`** check (recommended, fixable): asserts the repo's

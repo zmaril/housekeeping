@@ -242,6 +242,12 @@ url = "https://straitjacket.dev"   # expected homepage
 [allow-auto-merge]
 enabled = true                     # true | false (default false)
 
+[pinned-versions]
+cargo = "advisory"                 # advisory (default) | on | off
+actions = true                     # scan uses: refs (default true)
+capped_ok = false                  # accept bounded ranges (>=1.7,<2.0, ~>) as pinned
+ignore = ["@typespec/compiler"]    # dependency / action names to skip
+
 [[codegen]]                        # committed generated code: CI must regen + zero-diff
 name = "ruby bindings"
 command = "make bindgen"
@@ -252,6 +258,17 @@ A repo picks its auto-merge policy with `[allow-auto-merge] enabled = true`
 check then verifies GitHub's actual setting matches the declared preference
 either way; `housekeeper fix allow-auto-merge` flips the GitHub setting to
 match (needs an admin token — a 403 prints how to flip it by hand).
+
+`pinned-versions` (recommended) flags floating version specifiers per detected
+ecosystem so a dependency can't silently drift: npm/bun and python and ruby want
+an exact version (`1.2.3`, `==1.2.3`, `= 1.2.3`), actions want a 40-char commit
+SHA, and cargo is advisory because `Cargo.lock` pins the build. `@stable` /
+`@oldstable` action channels are allowed (matching `reproducible-toolchain`), and
+local/path/SHA-pinned deps are never flagged. Set `[pinned-versions] cargo = "on"`
+to enforce cargo, `actions = false` to skip workflows, `capped_ok = true` to accept
+bounded ranges (`>=1.7,<2.0`, `~>`), or `ignore = ["actions/checkout"]` to skip
+names. It never fixes automatically — pinning to a version is a human call, and
+dependabot still bumps the pins afterwards.
 
 Private repos automatically soften `website` and `license` to recommended,
 and branch protection reports skip-with-note where the plan doesn't allow it.

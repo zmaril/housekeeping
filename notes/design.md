@@ -149,6 +149,7 @@ non-skipped check failed.
 | `secret-scanning` | API | Secret scanning + push protection enabled (skip-with-note on private repos without Advanced Security) | Enable via API |
 | `workflow-permissions` | API | Default workflow `GITHUB_TOKEN` is read-only and cannot approve PRs | Set via API |
 | `lockfiles` | clone | For each manifest, the lockfile is committed and **in sync**: `cargo metadata --locked`, `bun install --frozen-lockfile --dry-run`, `uv lock --check`, `npm ci --dry-run` per ecosystem | Regenerate lockfile on a branch |
+| `pinned-versions` | clone | No floating version specifiers per ecosystem (npm/bun/python/ruby exact; actions SHA-pinned; cargo advisory) - `[pinned-versions]` configures scope | - |
 | `gitignore` | clone | `.gitignore` exists and covers each ecosystem's build junk (`target/`, `node_modules/`, `.venv/`, …) | Append missing patterns |
 | `straitjacket` | clone | A CI workflow step runs straitjacket — wiring only, findings are straitjacket's own business | Add the CI step from template |
 | `readme` | clone | Deterministic floor: README exists, has a title + description, install and usage sections, License and Contributing section headings (word families: licensing, contributions, … count), ≥ ~150 words, no broken relative links | Escalates to the `tidy-up` skill's README quality pass |

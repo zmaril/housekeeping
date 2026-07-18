@@ -6,7 +6,8 @@ the checks:
 - An **`Ecosystem`** is a package-manager world detected by its manifest file
   (cargo, bun, npm, uv, ruby, go, …). It carries everything a check needs to reason
   about that world: its lockfile and how to verify/regenerate it, its dependabot
-  ecosystem id, its build-junk gitignore patterns, and a CI job template.
+  ecosystem id, its build-junk gitignore patterns, a CI job template, and a
+  `PinRule` for telling a pinned version specifier from a floating one.
 - A **`Language`** is the programming language an ecosystem is written in (rust, js,
   python, ruby, go) — the CI signals that prove it's tested, linted, and formatted.
   Several ecosystems share one language (bun/npm/pnpm/yarn are all `js`), which is
@@ -172,12 +173,92 @@ LANGUAGES: dict[str, Language] = {
 }
 
 
+# ---- Pin rules: how an ecosystem tells a pinned specifier from a floating one --
+
+SHA40 = re.compile(r"[0-9a-f]{40}")
+
+
+@dataclass(frozen=True)
+class PinRule:
+    """Per-ecosystem rule for judging a version specifier string.
+
+    The pinned-versions check owns the *manifest-format parsing* — package.json
+    (JSON), pyproject/Cargo (TOML), Gemfile (text), workflow YAML (`uses:`) differ
+    structurally, so extracting name->specifier pairs is format-specific. A PinRule
+    owns the *ecosystem-specific judgement* applied to each extracted specifier, so
+    the check never hard-codes "an exact semver" or the `@stable` channel itself.
+
+    `classify(spec)` maps one specifier string to:
+
+    - ``"pinned"``   — a fully-pinned specifier (an exact version, or a 40-hex SHA).
+    - ``"bounded"``  — a capped range (`>=1.7,<2.0`, `~> 7`): counted separately and
+      accepted only when the check's `capped_ok` knob is set.
+    - ``"channel"``  — a moving release channel that is allowed anyway (`@stable`).
+    - ``"local"``    — a path/link/workspace dep, not a released version: excluded.
+    - ``"floating"`` — anything else.
+
+    `advisory` marks an ecosystem whose floating specifiers are advisory-only by
+    default because its lockfile pins the actual build (cargo, via Cargo.lock)."""
+
+    pinned: re.Pattern  # a fully-pinned specifier matches this end-to-end
+    bounded: re.Pattern | None = None  # a capped range (counted; accepted if capped_ok)
+    local_prefixes: tuple[str, ...] = ()  # spec prefixes for local/non-version deps
+    channels: frozenset[str] = frozenset()  # allowed moving release channels
+    sha: re.Pattern | None = None  # commit-SHA pin (git rev / action ref)
+    advisory: bool = (
+        False  # floating is advisory-only by default (a lockfile pins builds)
+    )
+
+    def classify(self, spec: str) -> str:
+        spec = spec.strip()
+        if self.local_prefixes and spec.startswith(self.local_prefixes):
+            return "local"
+        if spec in self.channels:
+            return "channel"
+        if self.pinned.fullmatch(spec):
+            return "pinned"
+        if self.bounded is not None and self.bounded.search(spec):
+            return "bounded"
+        return "floating"
+
+
+# npm/bun: pinned is an exact semver (1.2.3, 1.0.0-beta.5); ^/~/ranges/tags float.
+# file:/link:/workspace:/portal: and path (./, /) specifiers are local, not versions.
+NPM_PINS = PinRule(
+    pinned=re.compile(r"\d+\.\d+\.\d+(?:-[0-9A-Za-z.]+)?"),
+    local_prefixes=("file:", "link:", "workspace:", "portal:", ".", "/"),
+)
+# python (PEP 508): pinned is a lone `==X.Y.Z` (no `*`, single clause); a range with
+# both a lower and an upper bound is bounded; everything else floats.
+PYTHON_PINS = PinRule(
+    pinned=re.compile(r"===?\s*[^,*][^,*]*"),
+    bounded=re.compile(r"(?=.*>)(?=.*<)"),
+)
+# ruby: an exact `= X.Y.Z` (or bare `X.Y`) is pinned; `~>` is bounded; comparisons float.
+RUBY_PINS = PinRule(
+    pinned=re.compile(r"=?\s*v?\d+(?:\.\d+)*"),
+    bounded=re.compile(r"~>"),
+)
+# cargo: an exact `=X.Y.Z` version (or a git `rev` that is a 40-hex SHA) is pinned;
+# advisory by default because Cargo.lock pins the build.
+CARGO_PINS = PinRule(
+    pinned=re.compile(r"=.*"),
+    sha=SHA40,
+    advisory=True,
+)
+# github-actions: pinned is a 40-hex commit SHA; @stable/@oldstable are allowed channels.
+ACTIONS_PINS = PinRule(
+    pinned=SHA40,
+    channels=frozenset({"stable", "oldstable"}),
+)
+
+
 # ---- Ecosystems: a package-manager world detected by its manifest ------------
 
 
 @dataclass(frozen=True)
 class Ecosystem:
-    """A package-manager world. The first five fields are positional for backwards
+    """A package-manager world. The first four fields are positional for backwards
     compatibility; the rest carry the per-ecosystem knowledge the checks need."""
 
     name: str
@@ -192,6 +273,9 @@ class Ecosystem:
     gitignore: tuple[str, ...] = ()  # build-junk patterns .gitignore should carry
     ci_template: str = ""  # CI job snippet the ci-exists fix scaffolds
     typecheck_template: str = ""  # full typecheck workflow the typecheck fix scaffolds
+    pins: PinRule | None = (
+        None  # how pinned-versions judges this ecosystem's specifiers
+    )
 
 
 ECOSYSTEMS: dict[str, Ecosystem] = {
@@ -206,6 +290,7 @@ ECOSYSTEMS: dict[str, Ecosystem] = {
         lock_regen=("cargo", "metadata", "--format-version", "1"),
         gitignore=("target/",),
         ci_template=CARGO_CI,
+        pins=CARGO_PINS,
     ),
     "bun": Ecosystem(
         "bun",
@@ -220,6 +305,7 @@ ECOSYSTEMS: dict[str, Ecosystem] = {
         gitignore=("node_modules/",),
         ci_template=BUN_CI,
         typecheck_template=BUN_TYPECHECK,
+        pins=NPM_PINS,
     ),
     "pnpm": Ecosystem(
         "pnpm",
@@ -231,6 +317,7 @@ ECOSYSTEMS: dict[str, Ecosystem] = {
         lock_check=("pnpm", "install", "--frozen-lockfile", "--lockfile-only"),
         lock_regen=("pnpm", "install", "--lockfile-only"),
         gitignore=("node_modules/",),
+        pins=NPM_PINS,
     ),
     "yarn": Ecosystem(
         "yarn",
@@ -242,6 +329,7 @@ ECOSYSTEMS: dict[str, Ecosystem] = {
         lock_check=("yarn", "install", "--immutable", "--mode=skip-build"),
         lock_regen=("yarn", "install", "--mode=skip-build"),
         gitignore=("node_modules/",),
+        pins=NPM_PINS,
     ),
     "npm": Ecosystem(
         "npm",
@@ -254,6 +342,7 @@ ECOSYSTEMS: dict[str, Ecosystem] = {
         lock_regen=("npm", "install", "--package-lock-only"),
         gitignore=("node_modules/",),
         typecheck_template=NPM_TYPECHECK,
+        pins=NPM_PINS,
     ),
     "uv": Ecosystem(
         "uv",
@@ -267,6 +356,7 @@ ECOSYSTEMS: dict[str, Ecosystem] = {
         lock_regen=("uv", "lock"),
         gitignore=(".venv/", "__pycache__/"),
         ci_template=UV_CI,
+        pins=PYTHON_PINS,
     ),
     "pip": Ecosystem(
         "pip",
@@ -275,6 +365,7 @@ ECOSYSTEMS: dict[str, Ecosystem] = {
         "pip",
         language="python",
         gitignore=(".venv/", "__pycache__/"),
+        pins=PYTHON_PINS,
     ),
     "ruby": Ecosystem(
         "ruby",
@@ -283,6 +374,7 @@ ECOSYSTEMS: dict[str, Ecosystem] = {
         "bundler",
         language="ruby",
         ci_template=RUBY_CI,
+        pins=RUBY_PINS,
     ),
     "go": Ecosystem(
         "go",
@@ -292,12 +384,15 @@ ECOSYSTEMS: dict[str, Ecosystem] = {
         language="go",
         tool="go",
         ci_template=GO_CI,
+        # No pin rule: go.mod requires resolve to exact versions (MVS + go.sum), so
+        # there is no floating-specifier concept for pinned-versions to judge.
     ),
     "github-actions": Ecosystem(
         "github-actions",
         ".github/workflows",
         None,
         "github-actions",
+        pins=ACTIONS_PINS,
     ),
 }
 
