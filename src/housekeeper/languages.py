@@ -161,7 +161,7 @@ LANGUAGES: dict[str, Language] = {
     ),
     "ruby": Language(
         "ruby",
-        test=re.compile(r"\b(rspec|rake (test|spec)|minitest)\b"),
+        test=re.compile(r"\b(rspec|rake (test|spec)|minitest|ruby\b[^\n]*\btest/)"),
         lint=re.compile(r"\b(rubocop|standardrb)\b"),
         fmt=re.compile(r"\b(rubocop|standardrb)\b"),
     ),
@@ -323,7 +323,13 @@ ECOSYSTEMS: dict[str, Ecosystem] = {
         ("npm",),
         language="js",
         tool="bun",
-        lock_check=("bun", "install", "--frozen-lockfile", "--dry-run"),
+        lock_check=(
+            "bun",
+            "install",
+            "--frozen-lockfile",
+            "--dry-run",
+            "--ignore-scripts",
+        ),
         lock_regen=("bun", "install"),
         gitignore=("node_modules/",),
         ci_template=BUN_CI,

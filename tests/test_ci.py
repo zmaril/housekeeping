@@ -49,3 +49,10 @@ def test_combined_tools_satisfy_lint_and_fmt():
     assert LANGUAGES["python"].lint.search("uv run ruff check .")
     assert not LANGUAGES["python"].fmt.search("uv run ruff check .")
     assert LANGUAGES["python"].fmt.search("uv run ruff format --check .")
+
+
+def test_ruby_test_signal_recognizes_ruby_itest_idiom():
+    # Fleet ruby bindings run their tests as `bundle exec ruby -Itest test/...`.
+    assert LANGUAGES["ruby"].test.search("bundle exec ruby -Itest test/test_entl.rb")
+    # ...but a bare ruby invocation with no test file must not count.
+    assert not LANGUAGES["ruby"].test.search("ruby -e 'puts 1'")

@@ -66,6 +66,12 @@ individually) into a single release.
   rules). Verdict change: a repo with no markers now fails with an adoption nudge.
   `housekeeper fix repo-meta` pushes the declared values to GitHub, or — when a
   repo has no markers yet — seeds them into the README from GitHub's current values.
+- **`bun` lockfile check no longer runs `postinstall`**: the frozen
+  `bun install --dry-run` now passes `--ignore-scripts` (matching npm), so a repo
+  whose postinstall needs network/tools is no longer falsely flagged `bun.lock`
+  out of sync after the frozen check itself passed.
+- **ruby `test` signal recognizes the `ruby -Itest test/...` idiom**: `ci-exists`
+  now credits ruby tests run that way, so it no longer under-credits ruby.
 
 ## v0.19.0 — 2026-07-08
 
