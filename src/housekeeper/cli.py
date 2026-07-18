@@ -508,6 +508,39 @@ def cmd_serve(args) -> int:
     )
 
 
+def render_scaffold(result) -> None:
+    console.print(f"\n[bold]{result.dest}[/bold] ({result.flavor} skeleton)")
+    if result.created:
+        console.print(f"\n[green]created {len(result.created)} file(s):[/green]")
+        for rel in result.created:
+            console.print(f"  [green]+[/green] {rel}")
+    if result.skipped:
+        console.print(
+            f"\n[yellow]skipped {len(result.skipped)} existing file(s)[/yellow] "
+            "(pass --force to overwrite):"
+        )
+        for rel in result.skipped:
+            console.print(f"  [dim]= {rel}[/dim]")
+    console.print("\n[bold]Next steps (can't be scaffolded):[/bold]")
+    for step in result.next_steps:
+        console.print(f"  [cyan]-[/cyan] {step}")
+
+
+def cmd_new(args) -> int:
+    from .scaffold import FLAVORS, scaffold
+
+    if args.flavor not in FLAVORS:
+        console.print(
+            f"[red]unknown flavor {args.flavor!r}[/red] "
+            f"(choose one of: {', '.join(sorted(FLAVORS))})"
+        )
+        return 2
+    dest = Path(args.dir).expanduser() / args.name
+    result = scaffold(dest, args.name, args.flavor, args.private, args.force)
+    render_scaffold(result)
+    return 0
+
+
 def cmd_report(args) -> int:
     repo = resolve_repo(args.repo)
     results_path = RESULTS_DIR / f"{repo.replace('/', '--')}.json"
@@ -597,6 +630,31 @@ def main() -> None:
         "repo", nargs="?", help="owner/repo (default: inferred from cwd)"
     )
     p_fix.set_defaults(func=cmd_fix)
+
+    p_new = sub.add_parser("new", help="scaffold a new fleet-compliant repo skeleton")
+    p_new.add_argument("name", help="repo name (also the new directory name)")
+    p_new.add_argument(
+        "--dir",
+        default=".",
+        help="parent directory to create the repo in (default: current directory)",
+    )
+    p_new.add_argument(
+        "--flavor",
+        default="python",
+        choices=["rust", "bun", "python"],
+        help="ecosystem skeleton to scaffold (default: python)",
+    )
+    p_new.add_argument(
+        "--private",
+        action="store_true",
+        help="soften audience-facing expectations in the generated config",
+    )
+    p_new.add_argument(
+        "--force",
+        action="store_true",
+        help="overwrite existing files instead of skipping them",
+    )
+    p_new.set_defaults(func=cmd_new)
 
     p_report = sub.add_parser("report", help="re-render the last check run")
     p_report.add_argument(
