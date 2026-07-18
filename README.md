@@ -239,10 +239,19 @@ website = "off"                    # required | recommended | off
 [website]
 url = "https://straitjacket.dev"   # expected homepage
 
+[allow-auto-merge]
+enabled = true                     # true | false (default false)
+
 [[codegen]]                        # committed generated code: CI must regen + zero-diff
 name = "ruby bindings"
 command = "make bindgen"
 ```
+
+A repo picks its auto-merge policy with `[allow-auto-merge] enabled = true`
+(or `false`, the default) in `.housekeeping.toml`. The `allow-auto-merge`
+check then verifies GitHub's actual setting matches the declared preference
+either way; `housekeeper fix allow-auto-merge` flips the GitHub setting to
+match (needs an admin token — a 403 prints how to flip it by hand).
 
 Private repos automatically soften `website` and `license` to recommended,
 and branch protection reports skip-with-note where the plan doesn't allow it.
