@@ -47,6 +47,7 @@ DEFAULT_SEVERITY = {
     "changelog": "required",
     "repo-meta": "recommended",
     "allow-auto-merge": "recommended",
+    "dependabot-automerge": "recommended",
     "stale": "recommended",
 }
 

@@ -2,6 +2,20 @@
 
 Notable changes to housekeeping, newest first.
 
+## v0.27.0 — 2026-07-18
+
+- New **`dependabot-automerge`** check (recommended, fixable): when a repo opts
+  in with `[allow-auto-merge] dependabot = true` in `.housekeeping.toml`, it wants
+  a workflow that turns on auto-merge for dependabot's own PRs (non-major bumps
+  only — majors are left for a human), so GitHub lands them the moment their
+  required checks go green and never before. Opting in also requires
+  `enabled = true` (GitHub's repo auto-merge setting must be on); the check fails
+  loudly if it isn't. It only actually gates on green CI when the repo has required
+  status checks registered (see `required-checks`); without that, auto-merge fires
+  as soon as branch protection alone is satisfied. `housekeeper fix
+  dependabot-automerge` writes `.github/workflows/dependabot-automerge.yml`. New
+  check, so this needs a release bump (Zack cuts releases).
+
 ## v0.26.0 — 2026-07-18
 
 - `lockfiles` gains a git-history staleness fallback for ecosystems with no
@@ -72,6 +86,7 @@ Notable changes to housekeeping, newest first.
   skip). No auto-fix — pinning to a version is a human decision (like `builds` /
   `reproducible-toolchain`), and dependabot still bumps the pins afterwards. New
   check, so this needs a release bump (Zack cuts releases).
+
 ## v0.21.0 — 2026-07-18
 
 - New **`allow-auto-merge`** check (recommended, fixable): asserts the repo's
