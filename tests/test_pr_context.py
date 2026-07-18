@@ -41,4 +41,9 @@ def test_already_soft_severities_pass_through_undemoted():
 
 def test_the_set_is_exactly_the_pr_immutable_rows():
     # grades of main's runs or repo settings — nothing a PR's diff can change
-    assert MAIN_STATE_CHECKS == {"ci-green", "branch-protection", "required-checks"}
+    assert MAIN_STATE_CHECKS == {
+        "ci-green",
+        "branch-protection",
+        "required-checks",
+        "strict-status-checks",
+    }

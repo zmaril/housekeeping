@@ -2,6 +2,20 @@
 
 Notable changes to housekeeping, newest first.
 
+## Unreleased
+
+### New checks
+
+- **`strict-status-checks`** (required, fixable): the default branch must require
+  branches be up to date before merging — GitHub's `required_status_checks.strict`,
+  read from the ruleset or classic protection (OR-ing, like `required-checks`). With
+  it on, a PR can only merge once its branch is current, so CI reruns against the true
+  merged state and two individually-green PRs from stale bases can't silently break
+  `main`. Also recommends the repo-level "Always suggest updating pull request branches"
+  setting (`allow_update_branch`). The fix sets the strict policy on the default-branch
+  ruleset and turns `allow_update_branch` on (needs admin; required status checks must
+  exist first).
+
 ## v0.20.0 — 2026-07-18
 
 First release cut since v0.19.0. It consolidates the batch of checks, commands,
