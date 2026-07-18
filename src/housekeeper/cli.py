@@ -36,7 +36,9 @@ STYLE = {
 # deadlocked (the same self-reference ci-green already excludes for its
 # hosting workflow and the housekeeping family — see its docstring). They
 # stay hard on push/schedule/local runs, where main's state is the point.
-MAIN_STATE_CHECKS = frozenset({"ci-green", "branch-protection", "required-checks"})
+MAIN_STATE_CHECKS = frozenset(
+    {"ci-green", "branch-protection", "required-checks", "strict-status-checks"}
+)
 
 
 def effective_severity(check_name: str, severity: str, event: str) -> tuple[str, bool]:

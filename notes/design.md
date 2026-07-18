@@ -144,6 +144,7 @@ non-skipped check failed.
 | Check | Source | Pass criteria | Fix |
 |---|---|---|---|
 | `branch-protection` | API | Default branch has a ruleset (or classic protection): PRs required, status checks required, force-push and deletion blocked | Apply a standard ruleset via API |
+| `strict-status-checks` | API | Default branch requires branches be up to date before merging (`required_status_checks.strict`, read from ruleset or classic protection) so CI reruns against the true merged state; recommends the repo-level `allow_update_branch` setting | Set `strict_required_status_checks_policy` on the default-branch ruleset + PATCH `allow_update_branch` on (needs admin; required-checks must exist first) |
 | `ci-exists` | clone | Workflows trigger on PR + push, and **every detected language** (rust, js, python, ruby, go) has its own test, lint, and fmt signals in CI — combined tools (biome, rubocop) satisfy lint+fmt for their language | Scaffold a workflow from per-ecosystem templates |
 | `ci-green` | API | Latest completed default-branch run of **every** repo workflow (GitHub's `dynamic/` internals excluded) concluded `success` | none — report only |
 | `builds` | clone | Every build target runs in CI: package.json `build*` scripts per PR (transitive script resolution counts); tauri needs a per-PR compile check plus a full build on a scheduled workflow | none — report only |
