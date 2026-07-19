@@ -12,6 +12,7 @@ import json
 import os
 import re
 from collections.abc import Iterator
+from fnmatch import fnmatch
 from pathlib import Path
 
 import yaml
@@ -26,6 +27,22 @@ PACKAGE_SCRIPT = re.compile(r"\b(?:bun|npm|pnpm|yarn) run ([\w:.-]+)")
 # Test/lint/fmt signals and CI templates now live in languages.py — a check reads
 # `eco.language` / `LANGUAGES[...]` / `eco.ci_template` instead of a table here.
 SIGNAL_NAMES = ("test", "lint", "fmt")
+
+
+def _label(eco) -> str:
+    """The ecosystem's name, tagged with its directory when it isn't the root, so an
+    exemption line reads `bun (spike)` for a nested package — mirrors lockfiles."""
+    return f"{eco.name} ({eco.dir})" if eco.dir else eco.name
+
+
+def _ignored(rel: str, ignore: list[str]) -> bool:
+    """Prefix/glob match, mirroring stray_todos._ignored: `ignore = ["spikes"]`
+    exempts `spikes` AND `spikes/foo` (throwaway trees often hold nested packages)."""
+    for pat in ignore:
+        p = pat.strip("/")
+        if fnmatch(rel, p) or fnmatch(rel, f"{p}/*"):
+            return True
+    return False
 
 
 def workflow_files(workdir: Path) -> list[Path]:
@@ -131,20 +148,45 @@ def ci_exists(ctx: RepoContext):
     if not triggered:
         problems.append("no workflow triggers on push/pull_request")
 
-    languages = sorted({e.language for e in ctx.ecosystems if e.language})
+    # A repo can exempt throwaway/scratch package directories (a spike, a
+    # generated demo) from the per-language CI demand — mirrors [lockfiles] ignore:
+    #   [ci-exists]
+    #   ignore = ["spike", "typespec"]
+    # Matching is prefix/glob (like stray-todos), so `ignore = ["spikes"]` exempts
+    # `spikes` AND `spikes/foo`. A language leaves the demand set only when EVERY
+    # instance carrying it is exempt: an exempt scratch package must not excuse a
+    # real package of the same language elsewhere.
+    ignore = [str(p) for p in ctx.config.section("ci-exists").get("ignore", [])]
+    kept, exempt = [], []
+    for eco in ctx.ecosystems:
+        if _ignored(str(eco.dir).strip("/"), ignore):
+            exempt.append(eco)
+        else:
+            kept.append(eco)
+    exempt_labels = [_label(e) for e in exempt if e.language]
+    note = (
+        f"not graded: {', '.join(exempt_labels)} (exempt via [ci-exists] ignore)"
+        if exempt_labels
+        else ""
+    )
+
+    languages = sorted({e.language for e in kept if e.language})
     for lang in languages:
         language = LANGUAGES[lang]
         for signal in SIGNAL_NAMES:
             if not getattr(language, signal).search(commands):
                 problems.append(f"{lang}: no {signal} step")
     if problems:
-        return failed("; ".join(problems))
+        return failed("; ".join(problems), note)
     if not languages:
         return passed(
             f"{len(files)} workflow(s) triggered on push/PR",
-            note="no language ecosystems detected to demand jobs for",
+            note=note or "no language ecosystems detected to demand jobs for",
         )
-    return passed(f"test + lint + fmt in CI for every language: {', '.join(languages)}")
+    return passed(
+        f"test + lint + fmt in CI for every language: {', '.join(languages)}",
+        note,
+    )
 
 
 def templated_ecosystems(ecosystems) -> list:
