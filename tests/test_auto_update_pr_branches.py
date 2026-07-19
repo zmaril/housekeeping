@@ -16,54 +16,50 @@ from conftest import write_wf
 
 
 class FakeCtx:
-    """The slice strict_flag + the check read: try_api for protection, a workdir."""
+    """Feeds strict_flag a branch-protection read and the check a workdir.
+
+    `strict` None models the no-admin case: both protection reads fold to None,
+    which strict_flag reports as unreadable. True/False returns a ruleset rule
+    carrying that strict policy.
+    """
 
     repo, default_branch = "o/r", "main"
 
-    def __init__(self, tmp_path, rules=None, classic=None):
+    def __init__(self, tmp_path, strict=None):
         self.workdir = tmp_path
-        self._rules = rules
-        self._classic = classic
+        self._strict = strict
 
     def try_api(self, path, none_on=(404,), **kw):
-        if "/rules/branches/" in path:
-            return self._rules
-        if path.endswith("/protection/required_status_checks"):
-            return self._classic
-        return None
-
-
-def _rsc_rule(strict):
-    return {
-        "type": "required_status_checks",
-        "parameters": {"strict_required_status_checks_policy": strict},
-    }
+        if self._strict is None or "/rules/branches/" not in path:
+            return None
+        params = {"strict_required_status_checks_policy": self._strict}
+        return [{"type": "required_status_checks", "parameters": params}]
 
 
 def test_strict_on_with_workflow_passes(tmp_path):
     write_wf(tmp_path, "auto-update-pr-branches.yml", WORKFLOW)
-    result = auto_update_pr_branches(FakeCtx(tmp_path, rules=[_rsc_rule(True)]))
+    result = auto_update_pr_branches(FakeCtx(tmp_path, strict=True))
     assert result.status == Status.PASS
     assert "auto-updated" in result.details
 
 
 def test_strict_on_without_workflow_fails(tmp_path):
-    result = auto_update_pr_branches(FakeCtx(tmp_path, rules=[_rsc_rule(True)]))
+    result = auto_update_pr_branches(FakeCtx(tmp_path, strict=True))
     assert result.status == Status.FAIL
     assert "keeps open PRs current" in result.details
     assert "housekeeper fix auto-update-pr-branches" in result.note
 
 
 def test_strict_off_skips(tmp_path):
-    result = auto_update_pr_branches(FakeCtx(tmp_path, rules=[_rsc_rule(False)]))
+    result = auto_update_pr_branches(FakeCtx(tmp_path, strict=False))
     assert result.status == Status.SKIP
     assert "up to date before merge" in result.details
     assert "strict-status-checks" in result.note
 
 
 def test_strict_unreadable_skips(tmp_path):
-    # Both protection reads fold to None (no admin token): can't tell, so skip.
-    result = auto_update_pr_branches(FakeCtx(tmp_path, rules=None, classic=None))
+    # strict=None: both protection reads fold to None (no admin token), so skip.
+    result = auto_update_pr_branches(FakeCtx(tmp_path))
     assert result.status == Status.SKIP
     assert "couldn't read branch protection" in result.details
     assert "admin" in result.note
