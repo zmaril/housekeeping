@@ -19,7 +19,7 @@ import yaml
 
 from ..context import RepoContext
 from ..fixing import apply_file_fix
-from ..languages import LANGUAGES
+from ..languages import LANGUAGES, nested_manifests
 from ..registry import check, failed, fix_for, passed, skipped
 
 PACKAGE_SCRIPT = re.compile(r"\b(?:bun|npm|pnpm|yarn) run ([\w:.-]+)")
@@ -111,19 +111,27 @@ def run_commands(workflow: dict) -> str:
 
 def resolve_package_scripts(workdir: Path, commands: str) -> str:
     """A workflow's `bun run check` can hide the actual linter inside
-    package.json scripts — resolve one level so the patterns can see it."""
-    package = workdir / "package.json"
-    if not package.is_file():
+    package.json scripts — resolve one level so the patterns can see it.
+
+    Scripts live not only in the root package.json but in nested packages: a napi
+    binding crate whose CI runs `bun run check` under
+    `working-directory: crates/x-node`, where that crate's package.json maps
+    `"check": "biome check ."`. So resolve every `<mgr> run <script>` token against
+    EVERY package.json in the tree (root + nested), not just the root — mirroring
+    the nested-aware walk `detect_ecosystems` uses (it skips node_modules/vendor/
+    build trees). One level deep: a script body isn't itself re-resolved."""
+    names = PACKAGE_SCRIPT.findall(commands)
+    if not names:
         return ""
-    try:
-        scripts = json.loads(package.read_text()).get("scripts", {})
-    except (json.JSONDecodeError, AttributeError):
-        return ""
-    bodies = [
-        str(scripts[name])
-        for name in PACKAGE_SCRIPT.findall(commands)
-        if name in scripts
-    ]
+    bodies: list[str] = []
+    for package in nested_manifests(workdir, "package.json"):
+        try:
+            scripts = json.loads(package.read_text()).get("scripts", {})
+        except (json.JSONDecodeError, AttributeError):
+            continue
+        if not isinstance(scripts, dict):
+            continue
+        bodies += [str(scripts[name]) for name in names if name in scripts]
     return "\n".join(bodies).lower()
 
 
