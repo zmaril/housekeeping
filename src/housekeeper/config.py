@@ -12,6 +12,7 @@ DEFAULT_SEVERITY = {
     "branch-protection": "required",
     "required-checks": "required",
     "strict-status-checks": "required",
+    "auto-update-pr-branches": "recommended",
     "ruleset-bypass": "recommended",
     "ci-exists": "required",
     "ci-scoped": "recommended",

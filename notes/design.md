@@ -145,6 +145,7 @@ non-skipped check failed.
 |---|---|---|---|
 | `branch-protection` | API | Default branch has a ruleset (or classic protection): PRs required, status checks required, force-push and deletion blocked | Apply a standard ruleset via API |
 | `strict-status-checks` | API | Default branch requires branches be up to date before merging (`required_status_checks.strict`, read from ruleset or classic protection) so CI reruns against the true merged state; recommends the repo-level `allow_update_branch` setting | Set `strict_required_status_checks_policy` on the default-branch ruleset + PATCH `allow_update_branch` on (needs admin; required-checks must exist first) |
+| `auto-update-pr-branches` | clone + API | Only when `required_status_checks.strict` is on: a workflow keeps open PR branches current with the default branch after each merge, updating the head of each selected open PR via the update-branch API on every push to the default branch. Skip when strict is off (nothing to keep current) or unreadable (needs admin) | Ship `.github/workflows/auto-update-pr-branches.yml` |
 | `ci-exists` | clone | Workflows trigger on PR + push, and **every detected language** (rust, js, python, ruby, go) has its own test, lint, and fmt signals in CI — combined tools (biome, rubocop) satisfy lint+fmt for their language | Scaffold a workflow from per-ecosystem templates |
 | `ci-green` | API | Latest completed default-branch run of **every** repo workflow (GitHub's `dynamic/` internals excluded) concluded `success` | none — report only |
 | `builds` | clone | Every build target runs in CI: package.json `build*` scripts per PR (transitive script resolution counts); tauri needs a per-PR compile check plus a full build on a scheduled workflow | none — report only |
@@ -173,6 +174,17 @@ non-skipped check failed.
 | `stylelint` | clone | If the repo has stylesheets (`.css`/`.scss`/`.less`) or an existing stylelint config, a config is present **and** stylelint runs in CI; skip when there are no stylesheets | Scaffold `.stylelintrc.json` + a CI step |
 | `vale` | clone | A `.vale.ini` (with its `StylesPath`) is present **and** vale runs in CI. Overlaps with `straitjacket` by design — straitjacket scans for slop, vale enforces house style and terminology; wiring only, findings are vale's own business | Scaffold `.vale.ini` + `styles/` + a CI step |
 | `codespell` | clone | codespell runs in CI. The fleet's spell checker, split from vale on purpose: vale's dictionary spell-check false-positives on every unknown jargon word, so vale does style/terms and codespell does spelling — it flags only *known* misspellings, so it can't cry wolf on a term it's never seen. Wiring only | Scaffold `.codespellrc` + a CI step |
+
+`auto-update-pr-branches` is the operational other half of `strict-status-checks`:
+strict is the floor (CI reruns against the true merged state), but it also means
+every merge invalidates the up-to-date status of every other open PR, so someone
+has to press "Update branch" over and over to keep the queue flowing. The shipped
+workflow does that clicking on every push to the default branch. It stays
+loop-safe because updating a PR branch is not a push to the default branch, so it
+never re-triggers itself — the only fan-out is one CI run per updated PR — and the
+concurrency group coalesces a burst of merges into a single pass. For a very busy
+repo GitHub's native merge queue is the heavier-duty alternative and subsumes the
+workflow entirely; this check is the lightweight default for the fleet's volumes.
 
 Ecosystem detection lives once in `languages.py` (re-exported through
 `context.py`; look for `Cargo.toml`/`Cargo.lock`, `package.json` + which
