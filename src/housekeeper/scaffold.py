@@ -23,6 +23,7 @@ import stat
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .checks.auto_update_pr_branches import WORKFLOW as AUTO_UPDATE_PR_BRANCHES_WORKFLOW
 from .checks.conventional_commits import WORKFLOW as CONVENTIONAL_WORKFLOW
 from .checks.dependabot_automerge import WORKFLOW as DEPENDABOT_AUTOMERGE_WORKFLOW
 from .checks.license import MIT
@@ -609,6 +610,11 @@ def build_files(
         ".github/workflows/housekeeping.yml": HOUSEKEEPING_YAML,
         ".github/workflows/straitjacket.yml": STRAITJACKET_YAML,
         ".github/workflows/conventional.yml": _with_timeout(CONVENTIONAL_WORKFLOW),
+        # The workflow constant already carries a job-level timeout-minutes, so it
+        # is added verbatim (no _with_timeout wrap) unlike the others above.
+        ".github/workflows/auto-update-pr-branches.yml": (
+            AUTO_UPDATE_PR_BRANCHES_WORKFLOW
+        ),
     }
     typecheck = _typecheck_yaml(flavor)
     if typecheck is not None:

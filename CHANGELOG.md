@@ -2,6 +2,25 @@
 
 Notable changes to housekeeping, newest first.
 
+## Unreleased
+
+### New checks
+
+- **`auto-update-pr-branches`** (recommended, fixable): when the default branch
+  requires branches be up to date before merging (`required_status_checks.strict`,
+  the strict-status-checks check), a workflow must keep open PR branches current
+  with `main` after each merge. With strict on, every merge to `main` leaves the
+  other open PRs behind, and each one has to be updated by hand with the "Update
+  branch" button before it can merge in turn; this check asks for a workflow that
+  does that clicking on every push to `main`, updating the head of each selected
+  open PR via the update-branch API (the same merge-main-into-branch the button
+  performs). It skips when strict is off (nothing to keep current) and when branch
+  protection can't be read (needs an admin token). The fix ships
+  `.github/workflows/auto-update-pr-branches.yml`, whose selectors, concurrency
+  group, and default-branch-only trigger keep the update storm bounded to one CI
+  run per updated PR; a native merge queue is the heavier-duty alternative. The
+  scaffold ships the same workflow, and housekeeping itself is the first adopter.
+
 ## v0.21.0 — 2026-07-18
 
 Adds the `strict-status-checks` check, and fixes three defects in v0.20.0 that
