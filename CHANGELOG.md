@@ -15,6 +15,18 @@ Notable changes to housekeeping, newest first.
   still named in the result note, never silently skipped. Mirrors the `[lockfiles]
   ignore` escape hatch — the only other nested-aware check.
 
+### Fixed
+
+- **`ci-exists` now resolves `bun/npm/pnpm/yarn run <script>` against nested
+  `package.json` files, not just the repo root** — so it credits real
+  linters/formatters wired as a script in a subdirectory package (e.g. a napi
+  binding crate that runs `bun run check` → `biome check .`), instead of falsely
+  reporting the language has no lint/fmt step. Script resolution now walks every
+  `package.json` in the tree (the same nested-aware walk `detect_ecosystems` uses,
+  skipping `node_modules`/vendor/build trees) and unions the resolved bodies before
+  matching, matching the check's existing model of grading one flattened command
+  text per language.
+
 ### New checks
 
 - **`auto-update-pr-branches`** (recommended, fixable): when the default branch
