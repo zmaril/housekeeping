@@ -85,6 +85,80 @@ def test_nested_js_package_demands_js_in_ci(tmp_path):
         assert gap in result.details
 
 
+# --- the [ci-exists] ignore escape hatch --------------------------------------
+#
+# A repo can exempt throwaway/scratch package directories from the per-language CI
+# demand — mirrors [lockfiles] ignore. A language leaves the demand set only when
+# EVERY instance carrying it is exempt; exempted packages are always named in the
+# note, never silently skipped.
+
+
+def test_ignore_exempts_only_js_ecosystem_passes(tmp_path):
+    from dataclasses import replace
+
+    # A nested bun spike is the ONLY js ecosystem. Exempting `spikes` drops the js
+    # demand, so RUST_ONLY_CI (rust legs, no js legs) passes.
+    spike = replace(BUN, dir="spikes/demo")
+    ctx = repo(
+        tmp_path,
+        RUST_ONLY_CI,
+        ecosystems=[RUST, spike],
+        config={"ci-exists": {"ignore": ["spikes"]}},
+    )
+    result = ci_exists(ctx)
+    assert result.status == Status.PASS, result.details
+    assert "bun (spikes/demo)" in result.note
+    assert "exempt" in result.note and "[ci-exists] ignore" in result.note
+
+
+def test_ignore_does_not_excuse_a_real_package_of_same_language(tmp_path):
+    from dataclasses import replace
+
+    # The nested spike is exempt, but a real root bun package still demands js.
+    spike = replace(BUN, dir="spikes/demo")
+    root_bun = replace(BUN, dir="")
+    ctx = repo(
+        tmp_path,
+        RUST_ONLY_CI,
+        ecosystems=[RUST, root_bun, spike],
+        config={"ci-exists": {"ignore": ["spikes"]}},
+    )
+    result = ci_exists(ctx)
+    assert result.status == Status.FAIL
+    for gap in ("js: no test step", "js: no lint step", "js: no fmt step"):
+        assert gap in result.details
+    # The exempted one is still named in the note.
+    assert "bun (spikes/demo)" in result.note
+
+
+def test_ignore_matches_exact_dir(tmp_path):
+    from dataclasses import replace
+
+    spike = replace(BUN, dir="spikes/demo")
+    ctx = repo(
+        tmp_path,
+        RUST_ONLY_CI,
+        ecosystems=[RUST, spike],
+        config={"ci-exists": {"ignore": ["spikes/demo"]}},
+    )
+    result = ci_exists(ctx)
+    assert result.status == Status.PASS, result.details
+    assert "bun (spikes/demo)" in result.note
+
+
+def test_no_ignore_config_unchanged_still_demands_js(tmp_path):
+    from dataclasses import replace
+
+    # Regression guard: without an ignore list the nested js package is graded,
+    # exactly as before the escape hatch existed.
+    spike = replace(BUN, dir="spikes/demo")
+    ctx = repo(tmp_path, RUST_ONLY_CI, ecosystems=[RUST, spike])
+    result = ci_exists(ctx)
+    assert result.status == Status.FAIL
+    assert "js: no test step" in result.details
+    assert result.note == ""
+
+
 def test_ci_fix_dedups_templated_ecosystems_by_name():
     # Two nested bun packages must not scaffold two identical bun CI jobs.
     from dataclasses import replace

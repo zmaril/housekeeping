@@ -5,6 +5,7 @@ import json
 from types import SimpleNamespace
 
 from housekeeper.checks.ci import ci_exists
+from housekeeper.config import Config
 from housekeeper.registry import Status
 
 WORKFLOW = """\
@@ -34,6 +35,7 @@ def repo_with_check_script(tmp_path, scripts):
     return SimpleNamespace(
         workdir=tmp_path,
         ecosystems=[ECOSYSTEMS["bun"]],
+        config=Config(),
     )
 
 

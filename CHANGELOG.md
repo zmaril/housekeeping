@@ -4,6 +4,17 @@ Notable changes to housekeeping, newest first.
 
 ## Unreleased
 
+### Added
+
+- **`ci-exists` gained an `[ci-exists] ignore` list**: a repo can exempt
+  throwaway/scratch package directories (e.g. a spike) from the per-language CI
+  demand — `[ci-exists] ignore = ["spike", "typespec"]`, matched by prefix/glob so
+  `["spikes"]` covers `spikes` and everything under it. A language leaves the demand
+  set only when every instance carrying it is exempt, so an exempt scratch package
+  never excuses a real package of the same language elsewhere. Exempted packages are
+  still named in the result note, never silently skipped. Mirrors the `[lockfiles]
+  ignore` escape hatch — the only other nested-aware check.
+
 ### New checks
 
 - **`auto-update-pr-branches`** (recommended, fixable): when the default branch
