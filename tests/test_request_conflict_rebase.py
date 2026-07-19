@@ -50,6 +50,42 @@ def test_detector_matches_shipped_workflow(tmp_path):
     assert "housekeeping:request-conflict-rebase" in WORKFLOW
 
 
+def test_check_recognizes_a_customized_mention_handle(tmp_path):
+    # A repo that points MENTION_HANDLE at a different bot must still be
+    # recognized and pass: recognition keys on the marker, never the handle.
+    customized = WORKFLOW.replace(
+        'MENTION_HANDLE: "claude"', 'MENTION_HANDLE: "rebase-bot"'
+    )
+    assert customized != WORKFLOW
+    write_wf(tmp_path, "request-conflict-rebase.yml", customized)
+    assert _has_workflow(tmp_path)
+    result = request_conflict_rebase(StrictCtx(tmp_path, strict=True))
+    assert result.status == Status.PASS
+
+
+def test_detector_keys_on_marker_not_the_handle(tmp_path):
+    # Marker present, the literal "claude"/"@claude" absent entirely: still
+    # recognized, proving the matcher is coupled to the marker, not the mention.
+    only_marker = (
+        "name: x\n"
+        "jobs:\n  request:\n    env:\n"
+        '      MARKER: "<!-- housekeeping:request-conflict-rebase -->"\n'
+        '      MENTION_HANDLE: "rebase-bot"\n'
+    )
+    assert "claude" not in only_marker
+    write_wf(tmp_path, "custom.yml", only_marker)
+    assert _has_workflow(tmp_path)
+
+
+def test_default_mention_handle_is_claude_and_configurable():
+    # Ships defaulting to `claude`, resolved with a leading-@ strip so both
+    # `claude` and `@claude` work, and rendered into the body via a template.
+    assert 'MENTION_HANDLE: "claude"' in WORKFLOW
+    assert '(process.env.MENTION_HANDLE || "claude")' in WORKFLOW
+    assert 'replace(/^@/, "")' in WORKFLOW
+    assert "`@${mention} this PR conflicts" in WORKFLOW
+
+
 def test_fix_writes_the_workflow(tmp_path, monkeypatch):
     written: list[Path] = []
 

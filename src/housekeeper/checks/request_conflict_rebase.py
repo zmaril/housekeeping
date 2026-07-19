@@ -48,8 +48,10 @@ name: request-conflict-rebase
 # (mergeable_state "dirty") -- the update-branch API refuses, and the conflict
 # has to be resolved by editing the branch. This workflow closes that gap: on
 # every push to the default branch it finds the conflicted open PRs and posts a
-# comment mentioning @claude with the context needed to resolve them, so the
-# Claude GitHub app (if installed) picks it up and does the rebase.
+# comment mentioning @claude (the default) with the context needed to resolve
+# them, so the Claude GitHub app (if installed) picks it up and does the rebase.
+# The handle is configurable via the MENTION_HANDLE env below -- point it at a
+# different bot/user without touching anything else.
 #
 # Dependency, stated honestly: this only causes a rebase to happen if the repo
 # has the Claude GitHub app installed and configured to act on @claude mentions.
@@ -86,11 +88,13 @@ jobs:
     timeout-minutes: 15
     env:
       MARKER: "<!-- housekeeping:request-conflict-rebase -->"
+      MENTION_HANDLE: "claude"   # who to @-mention on a conflicted PR; point at a different bot/user by editing this
     steps:
       - uses: actions/github-script@v7
         with:
           script: |
             const marker = process.env.MARKER;
+            const mention = (process.env.MENTION_HANDLE || "claude").trim().replace(/^@/, "");
             const { owner, repo } = context.repo;
             const base = context.payload.repository.default_branch;
             const slug = `${owner}/${repo}`;
@@ -141,7 +145,7 @@ jobs:
               } else if (conflicts) {
                 const body = [
                   marker,
-                  `@claude this PR conflicts with \\`${base}\\` and cannot merge until the conflict is resolved.`,
+                  `@${mention} this PR conflicts with \\`${base}\\` and cannot merge until the conflict is resolved.`,
                   "",
                   `Please merge \\`${base}\\` into \\`${pr.head.ref}\\` and resolve the conflicts:`,
                   `- Base: \\`${base}\\``,
