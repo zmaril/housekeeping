@@ -51,6 +51,41 @@ def strict_flag(ctx: RepoContext) -> tuple[bool, bool, bool]:
     return found, strict, rules is None and classic is None
 
 
+def strict_workflow_gate(
+    ctx: RepoContext,
+    present: bool,
+    absent_details: str,
+    absent_note: str,
+    present_details: str,
+):
+    """Shared verdict for a check that wants a workflow only when the default
+    branch requires branches be up to date before merge.
+
+    Reads strict via `strict_flag` and applies the gating both the
+    auto-update-pr-branches and request-conflict-rebase checks share: skip (with
+    the standard reasons) when protection is unreadable or strict is off, fail
+    with the caller's `absent_*` message when strict is on but `present` is False,
+    else pass with `present_details`. Centralizing it keeps the two sibling checks
+    from each carrying — and drifting — a copy of the same branching.
+    """
+    _found, strict, both_unreadable = strict_flag(ctx)
+    if both_unreadable:
+        return skipped(
+            "couldn't read branch protection to tell whether strict up-to-date "
+            "is required",
+            note="needs an admin token to read the ruleset / classic protection",
+        )
+    if not strict:
+        return skipped(
+            "main doesn't require branches to be up to date before merge",
+            note="only needed when required_status_checks.strict is on; see the "
+            "strict-status-checks check",
+        )
+    if not present:
+        return failed(absent_details, note=absent_note)
+    return passed(present_details)
+
+
 @check("strict-status-checks", needs=("api", "admin"))
 def strict_status_checks(ctx: RepoContext):
     found, strict, both_unreadable = strict_flag(ctx)

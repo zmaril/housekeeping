@@ -27,6 +27,7 @@ from .checks.auto_update_pr_branches import WORKFLOW as AUTO_UPDATE_PR_BRANCHES_
 from .checks.conventional_commits import WORKFLOW as CONVENTIONAL_WORKFLOW
 from .checks.dependabot_automerge import WORKFLOW as DEPENDABOT_AUTOMERGE_WORKFLOW
 from .checks.license import MIT
+from .checks.request_conflict_rebase import WORKFLOW as REQUEST_CONFLICT_REBASE_WORKFLOW
 from .languages import BUN_TYPECHECK, ECOSYSTEMS
 
 # ---- Fleet-wide constants ----------------------------------------------------
@@ -614,6 +615,13 @@ def build_files(
         # is added verbatim (no _with_timeout wrap) unlike the others above.
         ".github/workflows/auto-update-pr-branches.yml": (
             AUTO_UPDATE_PR_BRANCHES_WORKFLOW
+        ),
+        # Companion to auto-update-pr-branches: it keeps clean-but-behind PR
+        # branches current; this one asks @claude to rebase the branches that
+        # truly conflict. The constant carries its own job-level timeout-minutes,
+        # so it too is added verbatim (no _with_timeout wrap).
+        ".github/workflows/request-conflict-rebase.yml": (
+            REQUEST_CONFLICT_REBASE_WORKFLOW
         ),
     }
     typecheck = _typecheck_yaml(flavor)

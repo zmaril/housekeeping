@@ -43,6 +43,27 @@ Notable changes to housekeeping, newest first.
   group, and default-branch-only trigger keep the update storm bounded to one CI
   run per updated PR; a native merge queue is the heavier-duty alternative. The
   scaffold ships the same workflow, and housekeeping itself is the first adopter.
+- **`request-conflict-rebase`** (recommended, fixable): the companion to
+  `auto-update-pr-branches`. The updater keeps clean-but-behind PR branches
+  current by merging `main` into them, but it can't help a PR whose branch has a
+  REAL merge conflict with `main` (`mergeable_state == "dirty"`) — the
+  update-branch API refuses, so the updater can only surface that PR in its
+  "Conflicts" summary and skip it, and the branch sits flagged until a human
+  notices. This check asks for the workflow that closes that gap: on every push to
+  `main` it finds the conflicted open PRs and posts a comment mentioning `@claude`
+  with the resolve context, so the Claude GitHub app (if installed) rebases them.
+  A hidden marker dedupes the request (one comment per conflict episode; cleared
+  when the PR stops conflicting), and fork PRs are skipped since the agent can't
+  push to a fork branch. Gating mirrors `auto-update-pr-branches` exactly — skips
+  when strict up-to-date is off (nothing to keep flowing) and when branch
+  protection can't be read (needs an admin token). It is a sibling workflow, not
+  merged into `auto-update-pr-branches.yml`, because each check owns exactly one
+  workflow file and each fix writes exactly one file. Stated honestly: the check
+  verifies the workflow is PRESENT only — it does not and cannot verify the Claude
+  GitHub app is installed, without which the comment is still a useful,
+  human-actionable flag. The fix ships
+  `.github/workflows/request-conflict-rebase.yml`; the scaffold ships the same
+  workflow, and housekeeping itself is the first adopter.
 
 ### Changed
 

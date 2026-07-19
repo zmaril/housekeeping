@@ -13,6 +13,7 @@ DEFAULT_SEVERITY = {
     "required-checks": "required",
     "strict-status-checks": "required",
     "auto-update-pr-branches": "recommended",
+    "request-conflict-rebase": "recommended",
     "ruleset-bypass": "recommended",
     "ci-exists": "required",
     "ci-scoped": "recommended",

@@ -20,9 +20,9 @@ from pathlib import Path
 
 from ..context import RepoContext
 from ..fixing import apply_file_fix
-from ..registry import check, failed, fix_for, passed, skipped
+from ..registry import check, fix_for
 from .ci import workflow_files
-from .strict_status_checks import strict_flag
+from .strict_status_checks import strict_workflow_gate
 
 WORKFLOW = """\
 name: auto-update-pr-branches
@@ -170,26 +170,14 @@ def _has_workflow(workdir: Path) -> bool:
 
 @check("auto-update-pr-branches", needs=("api", "admin", "clone"))
 def auto_update_pr_branches(ctx: RepoContext):
-    found, strict, both_unreadable = strict_flag(ctx)
-    if both_unreadable:
-        return skipped(
-            "couldn't read branch protection to tell whether strict up-to-date "
-            "is required",
-            note="needs an admin token to read the ruleset / classic protection",
-        )
-    if not strict:
-        return skipped(
-            "main doesn't require branches to be up to date before merge",
-            note="only needed when required_status_checks.strict is on; see the "
-            "strict-status-checks check",
-        )
-    if not _has_workflow(ctx.workdir):
-        return failed(
-            "strict up-to-date is required but nothing keeps open PRs current "
-            "with main after each merge",
-            note="run `housekeeper fix auto-update-pr-branches`",
-        )
-    return passed("open PR branches are auto-updated when main moves")
+    return strict_workflow_gate(
+        ctx,
+        present=_has_workflow(ctx.workdir),
+        absent_details="strict up-to-date is required but nothing keeps open PRs "
+        "current with main after each merge",
+        absent_note="run `housekeeper fix auto-update-pr-branches`",
+        present_details="open PR branches are auto-updated when main moves",
+    )
 
 
 @fix_for("auto-update-pr-branches")

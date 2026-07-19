@@ -5,6 +5,7 @@ from . import (  # noqa: F401
     required_checks,
     strict_status_checks,
     auto_update_pr_branches,
+    request_conflict_rebase,
     ruleset_bypass,
     ci,
     ci_scoped,
