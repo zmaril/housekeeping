@@ -45,7 +45,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: zmaril/housekeeping@v1
+      - uses: zmaril/housekeeping@v0.21.0
 """
 
 
@@ -140,7 +140,7 @@ on:
 jobs:
   captain:
     steps:
-      - uses: zmaril/housekeeping@v1
+      - uses: zmaril/housekeeping@v0.21.0
         with:
           captain: housecaptain.toml
 """

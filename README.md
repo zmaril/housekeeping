@@ -61,7 +61,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: zmaril/housekeeping@v0.9.0   # pin the full version — newest is on the Releases page
+      - uses: zmaril/housekeeping@v0.21.0   # pin the full version — newest is on the Releases page
 ```
 
 **Pin the full version, not a moving major tag.** Housekeeping adds checks in
@@ -179,7 +179,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: zmaril/housekeeping@v0.9.0   # pin the full version
+      - uses: zmaril/housekeeping@v0.21.0   # pin the full version
         with:
           captain: housecaptain.toml
           sync-configs: true
