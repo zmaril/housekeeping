@@ -32,10 +32,13 @@ never silent.
 
 ## Releases
 
-Version numbers exist only for the GitHub Action contract
-(`uses: zmaril/housekeeping@v1`). When a merged change alters what `@v1`
-does — a new check, a changed verdict, a fixed false negative — the change
-is not shipped until the release ceremony: immutable `vX.Y.Z` tag,
-fast-forward `v1`, GitHub release, changelog entry titled `vX.Y.Z — date`.
-Changes that don't touch Action behavior get date-only changelog entries and
-no tag. Cutting a release requires Zack's go-ahead, same as merging.
+Version numbers exist only for the GitHub Action contract: repos pin an exact
+`uses: zmaril/housekeeping@vX.Y.Z`, and Dependabot (the github-actions ecosystem)
+raises the bump when a newer release is tagged — that is how a repo gets new
+housekeeping. When a merged change alters what the Action does — a new check, a
+changed verdict, a fixed false negative — the change is not shipped until the
+release ceremony: an immutable `vX.Y.Z` tag, a GitHub release, and a changelog
+entry titled `vX.Y.Z — date`. Repos then receive it when Dependabot bumps their
+pinned `zmaril/housekeeping@vX.Y.Z`. Changes that don't touch Action behavior get
+date-only changelog entries and no tag. Cutting a release requires Zack's
+go-ahead, same as merging.

@@ -32,6 +32,16 @@ Notable changes to housekeeping, newest first.
   run per updated PR; a native merge queue is the heavier-duty alternative. The
   scaffold ships the same workflow, and housekeeping itself is the first adopter.
 
+### Changed
+
+- **Dropped the floating `v1` major tag.** Repos no longer pin
+  `zmaril/housekeeping@v1` and no release fast-forwards a moving major tag.
+  Instead a repo pins an exact `zmaril/housekeeping@vX.Y.Z` and Dependabot (the
+  github-actions ecosystem) raises the bump when a newer release is tagged. The
+  release ceremony is now just an immutable `vX.Y.Z` tag, a GitHub release, and a
+  changelog entry titled `vX.Y.Z — date`. The `v1` git tag itself still exists and
+  can be deleted separately.
+
 ## v0.21.0 — 2026-07-18
 
 Adds the `strict-status-checks` check, and fixes three defects in v0.20.0 that

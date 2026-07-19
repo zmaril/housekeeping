@@ -2,9 +2,9 @@ from housekeeper.ci_versions import ci_versions
 
 
 def test_action_refs_extracted():
-    wf = "uses: zmaril/housekeeping@v1\nuses: zmaril/straitjacket@v0.2.3"
+    wf = "uses: zmaril/housekeeping@v0.21.0\nuses: zmaril/straitjacket@v0.2.3"
     assert ci_versions("zmaril/powdermonkey", wf) == {
-        "housekeeping": "v1",
+        "housekeeping": "v0.21.0",
         "straitjacket": "v0.2.3",
     }
 
@@ -12,10 +12,10 @@ def test_action_refs_extracted():
 def test_install_script_tracked():
     wf = (
         "run: curl -fsSL https://raw.githubusercontent.com/zmaril/straitjacket/"
-        "main/install.sh | sh\nuses: zmaril/housekeeping@v1"
+        "main/install.sh | sh\nuses: zmaril/housekeeping@v0.21.0"
     )
     v = ci_versions("zmaril/powderworks", wf)
-    assert v == {"housekeeping": "v1", "straitjacket": "install.sh"}
+    assert v == {"housekeeping": "v0.21.0", "straitjacket": "install.sh"}
 
 
 def test_self_hosted_tools_report_self():
