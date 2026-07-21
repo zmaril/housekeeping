@@ -17,6 +17,21 @@ Notable changes to housekeeping, newest first.
 
 ### Fixed
 
+- **`auto-update-pr-branches` now performs the update with an optional GitHub
+  App/PAT token, so updated PR branches actually re-run CI.** GitHub deliberately
+  does not trigger workflows for pushes made with the built-in `GITHUB_TOKEN`, so
+  the old workflow's `updateBranch` push advanced each branch but its required
+  checks never ran — the PR sat at `mergeable_state: blocked` with zero check
+  runs, and the header comment's claim that each update "kicks that PR's CI" was
+  false. The workflow now mints a GitHub App installation token via
+  `actions/create-github-app-token` when an App is configured
+  (`AUTOUPDATE_APP_ID` variable + `AUTOUPDATE_APP_PRIVATE_KEY` secret), else uses
+  a fine-grained PAT (`AUTOUPDATE_TOKEN` secret), and falls back to
+  `GITHUB_TOKEN`. On the fallback path — when it actually updated a branch — it
+  prepends an explicit job-summary warning that those branches will not
+  re-trigger required checks until an elevated token is configured. Adopting
+  repos must provision the App/PAT for the fix to take effect; PRs already stuck
+  need a one-time `@dependabot recreate` (or equivalent re-push).
 - **`ci-exists` now resolves `bun/npm/pnpm/yarn run <script>` against nested
   `package.json` files, not just the repo root** — so it credits real
   linters/formatters wired as a script in a subdirectory package (e.g. a napi
@@ -40,9 +55,12 @@ Notable changes to housekeeping, newest first.
   performs). It skips when strict is off (nothing to keep current) and when branch
   protection can't be read (needs an admin token). The fix ships
   `.github/workflows/auto-update-pr-branches.yml`, whose selectors, concurrency
-  group, and default-branch-only trigger keep the update storm bounded to one CI
-  run per updated PR; a native merge queue is the heavier-duty alternative. The
-  scaffold ships the same workflow, and housekeeping itself is the first adopter.
+  group, and default-branch-only trigger keep the update storm bounded; updated
+  branches re-run CI (one run per updated PR) only when an elevated App/PAT token
+  is configured, since GitHub does not re-trigger workflows on a built-in
+  `GITHUB_TOKEN` push (see the `### Fixed` entry). A native merge queue is the
+  heavier-duty alternative. The scaffold ships the same workflow, and
+  housekeeping itself is the first adopter.
 
 ### Changed
 

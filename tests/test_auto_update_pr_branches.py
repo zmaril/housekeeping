@@ -83,6 +83,43 @@ def test_detector_matches_shipped_workflow(tmp_path):
     assert "github.rest.pulls.updateBranch" in WORKFLOW
 
 
+def test_workflow_resolves_an_elevated_token_before_falling_back():
+    # The update push must be able to carry a non-GITHUB_TOKEN identity, else
+    # GitHub suppresses the CI trigger and updated branches stay blocked. Ships
+    # an App-token mint step and resolves App > PAT > github.token in that order.
+    assert "actions/create-github-app-token@v1" in WORKFLOW
+    assert "if: ${{ vars.AUTOUPDATE_APP_ID != '' }}" in WORKFLOW
+    assert (
+        "github-token: ${{ steps.app_token.outputs.token"
+        " || secrets.AUTOUPDATE_TOKEN || github.token }}"
+    ) in WORKFLOW
+    # ELEVATED is true only when an App or PAT is configured, false otherwise.
+    assert (
+        "ELEVATED: ${{ (vars.AUTOUPDATE_APP_ID != '' ||"
+        " secrets.AUTOUPDATE_TOKEN != '') && 'true' || 'false' }}"
+    ) in WORKFLOW
+
+
+def test_workflow_warns_only_when_unelevated_and_it_updated_a_branch():
+    # Honest capability edge: the script reads ELEVATED and, when it fell back to
+    # the built-in token AND actually updated a branch, warns that those branches
+    # will not re-run required checks.
+    assert 'const elevated = process.env.ELEVATED === "true";' in WORKFLOW
+    assert "(!elevated && updated.length)" in WORKFLOW
+    assert "will" in WORKFLOW and "NOT re-run required checks" in WORKFLOW
+    assert "@dependabot recreate" in WORKFLOW
+
+
+def test_header_comment_tells_the_truth_about_github_token():
+    # The old header falsely claimed each update "kicks that PR's CI"; the rewrite
+    # states that a GITHUB_TOKEN update push is not a CI trigger.
+    assert "kicks that PR's CI" not in WORKFLOW
+    assert "does NOT trigger" in WORKFLOW
+    assert "AUTOUPDATE_APP_ID" in WORKFLOW
+    assert "AUTOUPDATE_APP_PRIVATE_KEY" in WORKFLOW
+    assert "AUTOUPDATE_TOKEN" in WORKFLOW
+
+
 def test_fix_writes_the_workflow(tmp_path, monkeypatch):
     written: list[Path] = []
 
@@ -109,3 +146,12 @@ def test_scaffold_includes_the_workflow():
     assert path in files
     assert files[path] == WORKFLOW
     assert "github.rest.pulls.updateBranch" in files[path]
+
+
+def test_self_adopted_copy_is_byte_identical():
+    # housekeeping dogfoods its own check: the workflow it ships in its own repo
+    # must equal the WORKFLOW constant byte-for-byte (same invariant the scaffold
+    # and fix uphold), so the check it dogfoods keeps passing.
+    repo_root = Path(__file__).resolve().parents[1]
+    committed = repo_root / ".github" / "workflows" / "auto-update-pr-branches.yml"
+    assert committed.read_text() == WORKFLOW
