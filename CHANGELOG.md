@@ -55,9 +55,12 @@ Notable changes to housekeeping, newest first.
   performs). It skips when strict is off (nothing to keep current) and when branch
   protection can't be read (needs an admin token). The fix ships
   `.github/workflows/auto-update-pr-branches.yml`, whose selectors, concurrency
-  group, and default-branch-only trigger keep the update storm bounded to one CI
-  run per updated PR; a native merge queue is the heavier-duty alternative. The
-  scaffold ships the same workflow, and housekeeping itself is the first adopter.
+  group, and default-branch-only trigger keep the update storm bounded; updated
+  branches re-run CI (one run per updated PR) only when an elevated App/PAT token
+  is configured, since GitHub does not re-trigger workflows on a built-in
+  `GITHUB_TOKEN` push (see the `### Fixed` entry). A native merge queue is the
+  heavier-duty alternative. The scaffold ships the same workflow, and
+  housekeeping itself is the first adopter.
 
 ### Changed
 
